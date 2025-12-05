@@ -223,24 +223,20 @@ final class MainViewController: NSViewController {
     private func setupUI() {
         view.wantsLayer = true
 
-        // Main horizontal split
-        let mainStack = NSStackView()
-        mainStack.orientation = .horizontal
-        mainStack.spacing = 0
-        mainStack.distribution = .fill
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(mainStack)
+        // Project list (fixed width, full height on left)
+        let projectScrollView = createProjectListScrollView()
+        projectScrollView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(projectScrollView)
 
-        // Left pane (project list)
-        let leftPane = createProjectListPane()
-        leftPane.translatesAutoresizingMaskIntoConstraints = false
+        // Button grid (top-right area)
+        let buttonGrid = createButtonGrid()
+        buttonGrid.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(buttonGrid)
 
-        // Right pane (button grid)
-        let rightPane = createButtonPane()
-        rightPane.translatesAutoresizingMaskIntoConstraints = false
-
-        mainStack.addArrangedSubview(leftPane)
-        mainStack.addArrangedSubview(rightPane)
+        // Console (below buttons, to the right of project list)
+        createConsoleView()
+        consoleScrollView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(consoleScrollView)
 
         // Status bar at very bottom
         statusLabel.font = .systemFont(ofSize: 12)
@@ -248,23 +244,38 @@ final class MainViewController: NSViewController {
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(statusLabel)
 
+        // Layout constants
+        let padding: CGFloat = 20
+        let projectListWidth: CGFloat = 280
+        let buttonGridHeight: CGFloat = 260 // 160 + 20 + 60 + 20 padding
+
         NSLayoutConstraint.activate([
-            mainStack.topAnchor.constraint(equalTo: view.topAnchor),
-            mainStack.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            mainStack.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            mainStack.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -8),
+            // Project list: fixed width, full height
+            projectScrollView.topAnchor.constraint(equalTo: view.topAnchor, constant: padding),
+            projectScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: padding),
+            projectScrollView.widthAnchor.constraint(equalToConstant: projectListWidth),
+            projectScrollView.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -8),
 
-            leftPane.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.45),
+            // Button grid: top-right, fixed height
+            buttonGrid.topAnchor.constraint(equalTo: view.topAnchor, constant: padding),
+            buttonGrid.leadingAnchor.constraint(equalTo: projectScrollView.trailingAnchor, constant: padding),
+            buttonGrid.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -padding),
+            buttonGrid.heightAnchor.constraint(equalToConstant: buttonGridHeight),
 
+            // Console: below buttons, from project list edge to window edge
+            consoleScrollView.topAnchor.constraint(equalTo: buttonGrid.bottomAnchor, constant: padding),
+            consoleScrollView.leadingAnchor.constraint(equalTo: projectScrollView.trailingAnchor, constant: padding),
+            consoleScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -padding),
+            consoleScrollView.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -8),
+
+            // Status bar
             statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             statusLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -8),
         ])
     }
 
-    private func createProjectListPane() -> NSView {
-        let container = NSView()
-
+    private func createProjectListScrollView() -> NSScrollView {
         // Table view for projects
         projectTableView.delegate = self
         projectTableView.dataSource = self
@@ -293,23 +304,13 @@ final class MainViewController: NSViewController {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .bezelBorder
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(scrollView)
 
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
-            scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
-            scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
-            scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8),
-        ])
-
-        return container
+        return scrollView
     }
 
-    private func createButtonPane() -> NSView {
+    private func createButtonGrid() -> NSView {
         let container = NSView()
 
-        // Button grid (at top)
         let gridStack = NSStackView()
         gridStack.orientation = .vertical
         gridStack.alignment = .centerX
@@ -368,7 +369,29 @@ final class MainViewController: NSViewController {
 
         container.addSubview(gridStack)
 
-        // Console output view
+        // Button sizes
+        let deviceSize: CGFloat = 160
+        let actionHeight: CGFloat = 60
+
+        NSLayoutConstraint.activate([
+            gridStack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            gridStack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+
+            iPhoneButton.widthAnchor.constraint(equalToConstant: deviceSize),
+            iPhoneButton.heightAnchor.constraint(equalToConstant: deviceSize),
+            iPadButton.widthAnchor.constraint(equalToConstant: deviceSize),
+            iPadButton.heightAnchor.constraint(equalToConstant: deviceSize),
+
+            installButton.widthAnchor.constraint(equalToConstant: deviceSize),
+            installButton.heightAnchor.constraint(equalToConstant: actionHeight),
+            runButton.widthAnchor.constraint(equalToConstant: deviceSize),
+            runButton.heightAnchor.constraint(equalToConstant: actionHeight),
+        ])
+
+        return container
+    }
+
+    private func createConsoleView() {
         consoleTextView = NSTextView()
         consoleTextView.isEditable = false
         consoleTextView.isSelectable = true
@@ -390,37 +413,6 @@ final class MainViewController: NSViewController {
         consoleScrollView.hasHorizontalScroller = false
         consoleScrollView.autohidesScrollers = true
         consoleScrollView.borderType = .bezelBorder
-        consoleScrollView.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(consoleScrollView)
-
-        // Button sizes - big squares for devices, shorter rectangles for actions
-        let deviceSize: CGFloat = 160
-        let actionHeight: CGFloat = 60
-        let buttonGridWidth = deviceSize * 2 + 20 // Two buttons + spacing
-
-        NSLayoutConstraint.activate([
-            // Grid at top, centered horizontally
-            gridStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
-            gridStack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-
-            iPhoneButton.widthAnchor.constraint(equalToConstant: deviceSize),
-            iPhoneButton.heightAnchor.constraint(equalToConstant: deviceSize),
-            iPadButton.widthAnchor.constraint(equalToConstant: deviceSize),
-            iPadButton.heightAnchor.constraint(equalToConstant: deviceSize),
-
-            installButton.widthAnchor.constraint(equalToConstant: deviceSize),
-            installButton.heightAnchor.constraint(equalToConstant: actionHeight),
-            runButton.widthAnchor.constraint(equalToConstant: deviceSize),
-            runButton.heightAnchor.constraint(equalToConstant: actionHeight),
-
-            // Console below buttons, aligned with button grid edges
-            consoleScrollView.topAnchor.constraint(equalTo: gridStack.bottomAnchor, constant: 20),
-            consoleScrollView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            consoleScrollView.widthAnchor.constraint(equalToConstant: buttonGridWidth),
-            consoleScrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8),
-        ])
-
-        return container
     }
 
     private func createActionButton(title: String, action: Selector) -> NSButton {
