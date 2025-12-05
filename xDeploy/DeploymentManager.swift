@@ -3,13 +3,17 @@ import Foundation
 // MARK: - DeploymentManager
 
 /// Handles the actual build and deployment operations.
-final class DeploymentManager {
+final class DeploymentManager: @unchecked Sendable {
     static let shared: DeploymentManager = .init()
 
     private init() {}
 
     /// Builds the project for the specified device.
-    func build(project: Project, deviceName: String) async throws -> String {
+    func build(
+        project: Project,
+        deviceName: String,
+        outputHandler: @escaping @Sendable (String) -> Void,
+    ) async throws {
         let args = [
             "-scheme",
             project.scheme,
@@ -20,11 +24,15 @@ final class DeploymentManager {
             "platform=iOS,name=\(deviceName)",
         ]
 
-        return try await runCommand("/usr/bin/xcodebuild", arguments: args)
+        try await runCommand("/usr/bin/xcodebuild", arguments: args, outputHandler: outputHandler)
     }
 
     /// Installs the app on the specified device.
-    func install(project: Project, deviceName: String) async throws -> String {
+    func install(
+        project: Project,
+        deviceName: String,
+        outputHandler: @escaping @Sendable (String) -> Void,
+    ) async throws {
         let appPath = (project.appBundlePath as NSString).expandingTildeInPath
         let args = [
             "devicectl",
@@ -36,11 +44,15 @@ final class DeploymentManager {
             appPath,
         ]
 
-        return try await runCommand("/usr/bin/xcrun", arguments: args)
+        try await runCommand("/usr/bin/xcrun", arguments: args, outputHandler: outputHandler)
     }
 
     /// Launches the app on the specified device.
-    func launch(project: Project, deviceName: String) async throws -> String {
+    func launch(
+        project: Project,
+        deviceName: String,
+        outputHandler: @escaping @Sendable (String) -> Void,
+    ) async throws {
         let args = [
             "devicectl",
             "device",
@@ -51,85 +63,149 @@ final class DeploymentManager {
             project.bundleID,
         ]
 
-        return try await runCommand("/usr/bin/xcrun", arguments: args)
+        try await runCommand("/usr/bin/xcrun", arguments: args, outputHandler: outputHandler)
     }
 
     /// Full deployment: build + install.
     func deployInstall(
         project: Project,
         deviceName: String,
-        progressHandler: @escaping (String) -> Void,
+        statusHandler: @escaping @Sendable (String) -> Void,
+        outputHandler: @escaping @Sendable (String) -> Void,
     ) async throws {
-        progressHandler("Building \(project.name) for \(deviceName)...")
-        _ = try await build(project: project, deviceName: deviceName)
+        statusHandler("Building \(project.name) for \(deviceName)...")
+        outputHandler("=== Building \(project.name) for \(deviceName) ===\n")
+        try await build(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
-        progressHandler("Installing on \(deviceName)...")
-        _ = try await install(project: project, deviceName: deviceName)
+        statusHandler("Installing on \(deviceName)...")
+        outputHandler("\n=== Installing on \(deviceName) ===\n")
+        try await install(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
-        progressHandler("✓ Installed \(project.name) on \(deviceName)")
+        statusHandler("✓ Installed \(project.name) on \(deviceName)")
+        outputHandler("\n✓ Installation complete\n")
     }
 
     /// Full deployment: build + install + launch.
     func deployRun(
         project: Project,
         deviceName: String,
-        progressHandler: @escaping (String) -> Void,
+        statusHandler: @escaping @Sendable (String) -> Void,
+        outputHandler: @escaping @Sendable (String) -> Void,
     ) async throws {
-        progressHandler("Building \(project.name) for \(deviceName)...")
-        _ = try await build(project: project, deviceName: deviceName)
+        statusHandler("Building \(project.name) for \(deviceName)...")
+        outputHandler("=== Building \(project.name) for \(deviceName) ===\n")
+        try await build(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
-        progressHandler("Installing on \(deviceName)...")
-        _ = try await install(project: project, deviceName: deviceName)
+        statusHandler("Installing on \(deviceName)...")
+        outputHandler("\n=== Installing on \(deviceName) ===\n")
+        try await install(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
-        progressHandler("Launching on \(deviceName)...")
-        _ = try await launch(project: project, deviceName: deviceName)
+        statusHandler("Launching on \(deviceName)...")
+        outputHandler("\n=== Launching on \(deviceName) ===\n")
+        try await launch(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
-        progressHandler("✓ Running \(project.name) on \(deviceName)")
+        statusHandler("✓ Running \(project.name) on \(deviceName)")
+        outputHandler("\n✓ Launch complete\n")
     }
 
-    /// Runs a shell command and returns the output.
-    @discardableResult
-    private func runCommand(_ command: String, arguments: [String]) async throws -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: command)
-        process.arguments = arguments
+    /// Runs a shell command asynchronously with streaming output.
+    private func runCommand(
+        _ command: String,
+        arguments: [String],
+        outputHandler: @escaping @Sendable (String) -> Void,
+    ) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: command)
+                process.arguments = arguments
 
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
+                let outputPipe = Pipe()
+                let errorPipe = Pipe()
+                process.standardOutput = outputPipe
+                process.standardError = errorPipe
 
-        try process.run()
-        process.waitUntilExit()
+                // Buffer for partial lines
+                var outputBuffer = Data()
+                var errorBuffer = Data()
 
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                // Stream stdout
+                outputPipe.fileHandleForReading.readabilityHandler = { handle in
+                    let data = handle.availableData
+                    guard !data.isEmpty else { return }
+                    outputBuffer.append(data)
 
-        let output = String(data: outputData, encoding: .utf8) ?? ""
-        let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+                    // Process complete lines
+                    while let newlineRange = outputBuffer.range(of: Data([0x0A])) {
+                        let lineData = outputBuffer.subdata(in: 0 ..< newlineRange.upperBound)
+                        outputBuffer.removeSubrange(0 ..< newlineRange.upperBound)
+                        if let line = String(data: lineData, encoding: .utf8) {
+                            outputHandler(line)
+                        }
+                    }
+                }
 
-        if process.terminationStatus != 0 {
-            throw DeploymentError.commandFailed(
-                command: "\(command) \(arguments.joined(separator: " "))",
-                exitCode: process.terminationStatus,
-                output: output,
-                error: errorOutput,
-            )
+                // Stream stderr
+                errorPipe.fileHandleForReading.readabilityHandler = { handle in
+                    let data = handle.availableData
+                    guard !data.isEmpty else { return }
+                    errorBuffer.append(data)
+
+                    // Process complete lines
+                    while let newlineRange = errorBuffer.range(of: Data([0x0A])) {
+                        let lineData = errorBuffer.subdata(in: 0 ..< newlineRange.upperBound)
+                        errorBuffer.removeSubrange(0 ..< newlineRange.upperBound)
+                        if let line = String(data: lineData, encoding: .utf8) {
+                            outputHandler(line)
+                        }
+                    }
+                }
+
+                do {
+                    try process.run()
+                } catch {
+                    outputPipe.fileHandleForReading.readabilityHandler = nil
+                    errorPipe.fileHandleForReading.readabilityHandler = nil
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                process.waitUntilExit()
+
+                // Clean up handlers
+                outputPipe.fileHandleForReading.readabilityHandler = nil
+                errorPipe.fileHandleForReading.readabilityHandler = nil
+
+                // Flush any remaining buffered content
+                if !outputBuffer.isEmpty, let remaining = String(data: outputBuffer, encoding: .utf8) {
+                    outputHandler(remaining)
+                }
+                if !errorBuffer.isEmpty, let remaining = String(data: errorBuffer, encoding: .utf8) {
+                    outputHandler(remaining)
+                }
+
+                if process.terminationStatus != 0 {
+                    continuation.resume(throwing: DeploymentError.commandFailed(
+                        command: "\(command) \(arguments.joined(separator: " "))",
+                        exitCode: process.terminationStatus,
+                    ))
+                } else {
+                    continuation.resume()
+                }
+            }
         }
-
-        return output + errorOutput
     }
 }
 
 // MARK: - DeploymentError
 
 enum DeploymentError: LocalizedError {
-    case commandFailed(command: String, exitCode: Int32, output: String, error: String)
+    case commandFailed(command: String, exitCode: Int32)
 
     var errorDescription: String? {
         switch self {
-        case let .commandFailed(command, exitCode, _, error):
-            "Command failed (exit \(exitCode)): \(command)\n\(error)"
+        case let .commandFailed(command, exitCode):
+            "Command failed (exit \(exitCode)): \(command)"
         }
     }
 }

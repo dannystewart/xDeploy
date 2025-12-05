@@ -162,6 +162,10 @@ final class MainViewController: NSViewController {
     private var installButton: NSButton!
     private var runButton: NSButton!
 
+    // Console output
+    private var consoleTextView: NSTextView!
+    private var consoleScrollView: NSScrollView!
+
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 500))
     }
@@ -305,7 +309,7 @@ final class MainViewController: NSViewController {
     private func createButtonPane() -> NSView {
         let container = NSView()
 
-        // 2x2 grid
+        // Button grid (at top)
         let gridStack = NSStackView()
         gridStack.orientation = .vertical
         gridStack.alignment = .centerX
@@ -364,13 +368,40 @@ final class MainViewController: NSViewController {
 
         container.addSubview(gridStack)
 
+        // Console output view
+        consoleTextView = NSTextView()
+        consoleTextView.isEditable = false
+        consoleTextView.isSelectable = true
+        consoleTextView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        consoleTextView.backgroundColor = NSColor.textBackgroundColor
+        consoleTextView.textColor = .textColor
+        consoleTextView.autoresizingMask = [.width]
+        consoleTextView.isVerticallyResizable = true
+        consoleTextView.isHorizontallyResizable = false
+        consoleTextView.textContainer?.widthTracksTextView = true
+        consoleTextView.textContainer?.containerSize = NSSize(
+            width: CGFloat.greatestFiniteMagnitude,
+            height: CGFloat.greatestFiniteMagnitude,
+        )
+
+        consoleScrollView = NSScrollView()
+        consoleScrollView.documentView = consoleTextView
+        consoleScrollView.hasVerticalScroller = true
+        consoleScrollView.hasHorizontalScroller = false
+        consoleScrollView.autohidesScrollers = true
+        consoleScrollView.borderType = .bezelBorder
+        consoleScrollView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(consoleScrollView)
+
         // Button sizes - big squares for devices, shorter rectangles for actions
         let deviceSize: CGFloat = 160
         let actionHeight: CGFloat = 60
+        let buttonGridWidth = deviceSize * 2 + 20 // Two buttons + spacing
 
         NSLayoutConstraint.activate([
+            // Grid at top, centered horizontally
+            gridStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
             gridStack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            gridStack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
 
             iPhoneButton.widthAnchor.constraint(equalToConstant: deviceSize),
             iPhoneButton.heightAnchor.constraint(equalToConstant: deviceSize),
@@ -381,6 +412,12 @@ final class MainViewController: NSViewController {
             installButton.heightAnchor.constraint(equalToConstant: actionHeight),
             runButton.widthAnchor.constraint(equalToConstant: deviceSize),
             runButton.heightAnchor.constraint(equalToConstant: actionHeight),
+
+            // Console below buttons, aligned with button grid edges
+            consoleScrollView.topAnchor.constraint(equalTo: gridStack.bottomAnchor, constant: 20),
+            consoleScrollView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            consoleScrollView.widthAnchor.constraint(equalToConstant: buttonGridWidth),
+            consoleScrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8),
         ])
 
         return container
@@ -446,6 +483,7 @@ final class MainViewController: NSViewController {
         guard !devices.isEmpty else { return }
 
         setUIEnabled(false)
+        clearConsole()
 
         Task {
             do {
@@ -454,20 +492,36 @@ final class MainViewController: NSViewController {
                         try await DeploymentManager.shared.deployRun(
                             project: project,
                             deviceName: device,
-                        ) { [weak self] status in
-                            Task { @MainActor in
-                                self?.statusLabel.stringValue = status
-                            }
-                        }
+                            statusHandler: { [weak self] status in
+                                guard let self else { return }
+                                Task { @MainActor in
+                                    self.statusLabel.stringValue = status
+                                }
+                            },
+                            outputHandler: { [weak self] output in
+                                guard let self else { return }
+                                Task { @MainActor in
+                                    self.appendToConsole(output)
+                                }
+                            },
+                        )
                     } else {
                         try await DeploymentManager.shared.deployInstall(
                             project: project,
                             deviceName: device,
-                        ) { [weak self] status in
-                            Task { @MainActor in
-                                self?.statusLabel.stringValue = status
-                            }
-                        }
+                            statusHandler: { [weak self] status in
+                                guard let self else { return }
+                                Task { @MainActor in
+                                    self.statusLabel.stringValue = status
+                                }
+                            },
+                            outputHandler: { [weak self] output in
+                                guard let self else { return }
+                                Task { @MainActor in
+                                    self.appendToConsole(output)
+                                }
+                            },
+                        )
                     }
                 }
 
@@ -478,6 +532,7 @@ final class MainViewController: NSViewController {
                 }
             } catch {
                 await MainActor.run {
+                    appendToConsole("\n✗ Error: \(error.localizedDescription)\n")
                     statusLabel.stringValue = "✗ Error: \(error.localizedDescription)"
                     setUIEnabled(true)
 
@@ -489,6 +544,23 @@ final class MainViewController: NSViewController {
                 }
             }
         }
+    }
+
+    private func clearConsole() {
+        consoleTextView.string = ""
+    }
+
+    private func appendToConsole(_ text: String) {
+        consoleTextView.textStorage?.append(NSAttributedString(
+            string: text,
+            attributes: [
+                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+                .foregroundColor: NSColor.textColor,
+            ],
+        ))
+
+        // Auto-scroll to bottom
+        consoleTextView.scrollToEndOfDocument(nil)
     }
 
     private func setUIEnabled(_ enabled: Bool) {
