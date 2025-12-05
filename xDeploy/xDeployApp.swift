@@ -1,17 +1,11 @@
-//
-//  xDeployApp.swift
-//  xDeploy
-//
-//  Created by Danny Stewart on 12/5/25.
-//
-
-import SwiftUI
+import AppKit
 
 @main
-struct xDeployApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+struct xDeployApp {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.run()
     }
 }
