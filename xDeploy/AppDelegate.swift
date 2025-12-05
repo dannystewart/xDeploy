@@ -62,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 800, height: 500),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .unifiedTitleAndToolbar],
             backing: .buffered,
             defer: false,
         )
@@ -71,6 +71,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.center()
         window.setFrameAutosaveName("MainWindow")
         window.minSize = NSSize(width: 700, height: 450)
+
+        // Set up toolbar
+        let toolbar = NSToolbar(identifier: "MainToolbar")
+        toolbar.delegate = viewController
+        toolbar.displayMode = .iconOnly
+        window.toolbar = toolbar
+        window.toolbarStyle = .unified
 
         window.makeKeyAndOrderFront(nil)
         mainWindow = window

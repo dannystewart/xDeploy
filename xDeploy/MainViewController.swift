@@ -349,16 +349,6 @@ final class MainViewController: NSViewController {
 
         container.addSubview(gridStack)
 
-        // Settings button in corner
-        let settingsButton = NSButton(
-            image: NSImage(systemSymbolName: "gear", accessibilityDescription: "Settings")!,
-            target: self,
-            action: #selector(showSettings),
-        )
-        settingsButton.bezelStyle = .rounded
-        settingsButton.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(settingsButton)
-
         // Button sizes - big squares for devices, shorter rectangles for actions
         let deviceSize: CGFloat = 160
         let actionHeight: CGFloat = 60
@@ -376,9 +366,6 @@ final class MainViewController: NSViewController {
             installButton.heightAnchor.constraint(equalToConstant: actionHeight),
             runButton.widthAnchor.constraint(equalToConstant: deviceSize),
             runButton.heightAnchor.constraint(equalToConstant: actionHeight),
-
-            settingsButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            settingsButton.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16),
         ])
 
         return container
@@ -601,5 +588,55 @@ extension MainViewController: NSTableViewDelegate {
         let selectedRow = projectTableView.selectedRow
         selectedProjectIndex = selectedRow >= 0 ? selectedRow : nil
         updateButtonStates()
+    }
+}
+
+// MARK: NSToolbarDelegate
+
+extension MainViewController: NSToolbarDelegate {
+    private static let addProjectIdentifier = NSToolbarItem.Identifier("addProject")
+    private static let settingsIdentifier = NSToolbarItem.Identifier("settings")
+
+    func toolbarDefaultItemIdentifiers(_: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [
+            Self.addProjectIdentifier,
+            .flexibleSpace,
+            Self.settingsIdentifier,
+        ]
+    }
+
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        toolbarDefaultItemIdentifiers(toolbar)
+    }
+
+    func toolbar(
+        _: NSToolbar,
+        itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
+        willBeInsertedIntoToolbar _: Bool,
+    ) -> NSToolbarItem? {
+        switch itemIdentifier {
+        case Self.addProjectIdentifier:
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.label = "Add Project"
+            item.paletteLabel = "Add Project"
+            item.toolTip = "Add a new project"
+            item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "Add Project")
+            item.target = self
+            item.action = #selector(addProject)
+            return item
+
+        case Self.settingsIdentifier:
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.label = "Settings"
+            item.paletteLabel = "Settings"
+            item.toolTip = "Device Settings"
+            item.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Settings")
+            item.target = self
+            item.action = #selector(showSettings)
+            return item
+
+        default:
+            return nil
+        }
     }
 }
