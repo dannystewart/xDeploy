@@ -3,10 +3,14 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mainWindow: NSWindow?
     private var mainViewController: MainViewController?
+    private var menuBarManager: MenuBarManager?
 
     func applicationDidFinishLaunching(_: Notification) {
         setupMainMenu()
         setupMainWindow()
+        if let viewController = mainViewController {
+            menuBarManager = MenuBarManager(mainViewController: viewController)
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
 

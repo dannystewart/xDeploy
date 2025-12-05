@@ -210,6 +210,23 @@ final class MainViewController: NSViewController {
         presentAsSheet(editor)
     }
 
+    func clearConsole() {
+        consoleTextView.string = ""
+    }
+
+    func appendToConsole(_ text: String) {
+        consoleTextView.textStorage?.append(NSAttributedString(
+            string: text,
+            attributes: [
+                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+                .foregroundColor: NSColor.textColor,
+            ],
+        ))
+
+        // Auto-scroll to bottom
+        consoleTextView.scrollToEndOfDocument(nil)
+    }
+
     // MARK: - Data
 
     private func loadData() {
@@ -545,23 +562,6 @@ final class MainViewController: NSViewController {
                 }
             }
         }
-    }
-
-    private func clearConsole() {
-        consoleTextView.string = ""
-    }
-
-    private func appendToConsole(_ text: String) {
-        consoleTextView.textStorage?.append(NSAttributedString(
-            string: text,
-            attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
-                .foregroundColor: NSColor.textColor,
-            ],
-        ))
-
-        // Auto-scroll to bottom
-        consoleTextView.scrollToEndOfDocument(nil)
     }
 
     private func setUIEnabled(_ enabled: Bool) {
