@@ -264,7 +264,7 @@ final class MainViewController: NSViewController {
         projectTableView.delegate = self
         projectTableView.dataSource = self
         projectTableView.headerView = nil
-        projectTableView.rowHeight = 32
+        projectTableView.rowHeight = 48
         projectTableView.selectionHighlightStyle = .regular
         projectTableView.allowsEmptySelection = true
         projectTableView.usesAlternatingRowBackgroundColors = true
@@ -547,6 +547,8 @@ extension MainViewController: NSTableViewDataSource {
 // MARK: NSTableViewDelegate
 
 extension MainViewController: NSTableViewDelegate {
+    private static let pathTagBase = 1000
+
     func tableView(_ tableView: NSTableView, viewFor _: NSTableColumn?, row: Int) -> NSView? {
         let identifier = NSUserInterfaceItemIdentifier("ProjectCell")
 
@@ -556,21 +558,64 @@ extension MainViewController: NSTableViewDelegate {
             cellView = NSTableCellView()
             cellView?.identifier = identifier
 
-            let textField = NSTextField(labelWithString: "")
-            textField.font = .systemFont(ofSize: 13)
-            textField.translatesAutoresizingMaskIntoConstraints = false
-            cellView?.addSubview(textField)
-            cellView?.textField = textField
+            // Icon view
+            let imageView = NSImageView()
+            imageView.imageScaling = .scaleProportionallyUpOrDown
+            imageView.translatesAutoresizingMaskIntoConstraints = false
+            cellView?.addSubview(imageView)
+            cellView?.imageView = imageView
+
+            // Title label
+            let titleField = NSTextField(labelWithString: "")
+            titleField.font = .systemFont(ofSize: 13, weight: .regular)
+            titleField.lineBreakMode = .byTruncatingTail
+            titleField.translatesAutoresizingMaskIntoConstraints = false
+            cellView?.addSubview(titleField)
+            cellView?.textField = titleField
+
+            // Path label
+            let pathField = NSTextField(labelWithString: "")
+            pathField.font = .systemFont(ofSize: 11)
+            pathField.textColor = .secondaryLabelColor
+            pathField.lineBreakMode = .byTruncatingMiddle
+            pathField.translatesAutoresizingMaskIntoConstraints = false
+            pathField.tag = Self.pathTagBase
+            cellView?.addSubview(pathField)
+
+            let iconSize: CGFloat = 32
 
             NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor, constant: 8),
-                textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor, constant: -8),
-                textField.centerYAnchor.constraint(equalTo: cellView!.centerYAnchor),
+                imageView.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor, constant: 6),
+                imageView.centerYAnchor.constraint(equalTo: cellView!.centerYAnchor),
+                imageView.widthAnchor.constraint(equalToConstant: iconSize),
+                imageView.heightAnchor.constraint(equalToConstant: iconSize),
+
+                titleField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 8),
+                titleField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor, constant: -8),
+                titleField.topAnchor.constraint(equalTo: cellView!.topAnchor, constant: 6),
+
+                pathField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
+                pathField.trailingAnchor.constraint(equalTo: titleField.trailingAnchor),
+                pathField.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 1),
             ])
         }
 
         let project = appData.projects[row]
         cellView?.textField?.stringValue = project.name
+
+        // Set path with ~ abbreviation
+        if let pathField = cellView?.viewWithTag(Self.pathTagBase) as? NSTextField {
+            let path = project.projectPath
+            let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+            let displayPath = path.hasPrefix(homeDir)
+                ? "~" + path.dropFirst(homeDir.count)
+                : path
+            pathField.stringValue = displayPath
+        }
+
+        // Get icon for .xcodeproj or .xcworkspace
+        let url = URL(fileURLWithPath: project.projectPath)
+        cellView?.imageView?.image = NSWorkspace.shared.icon(forFile: url.path)
 
         return cellView
     }
