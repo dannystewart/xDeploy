@@ -1,7 +1,7 @@
 import AppKit
 
 /// Manages the menu bar status item for quick project deployment.
-final class MenuBarManager {
+final class MenuBarManager: NSObject, NSMenuDelegate {
     private enum Device {
         case iPhone
         case iPad
@@ -13,23 +13,14 @@ final class MenuBarManager {
 
     init(mainViewController: MainViewController) {
         self.mainViewController = mainViewController
+        super.init()
         setupStatusItem()
     }
 
-    private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    // MARK: - NSMenuDelegate
 
-        if let button = statusItem?.button {
-            let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .medium)
-            button.image = NSImage(systemSymbolName: "iphone", accessibilityDescription: "xDeploy")?
-                .withSymbolConfiguration(config)
-        }
-
-        rebuildMenu()
-    }
-
-    private func rebuildMenu() {
-        let menu = NSMenu()
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
 
         let appData = DataManager.shared.load()
 
@@ -77,30 +68,39 @@ final class MenuBarManager {
         iPadItem.target = self
         iPadItem.state = selectedDevice == .iPad ? .on : .off
         menu.addItem(iPadItem)
+    }
 
+    private func setupStatusItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+
+        if let button = statusItem?.button {
+            let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .medium)
+            button.image = NSImage(systemSymbolName: "iphone", accessibilityDescription: "xDeploy")?
+                .withSymbolConfiguration(config)
+        }
+
+        let menu = NSMenu()
+        menu.delegate = self
         statusItem?.menu = menu
     }
 
     @objc private func selectiPhone() {
         selectedDevice = .iPhone
-        rebuildMenu()
     }
 
     @objc private func selectiPad() {
         selectedDevice = .iPad
-        rebuildMenu()
     }
 
     @objc private func runProject(_ sender: NSMenuItem) {
         guard let project = sender.representedObject as? Project else { return }
 
-        // Move this project to the top of the list
+        // Move this project to the top of the list (menu will rebuild on next open)
         var appData = DataManager.shared.load()
         if let index = appData.projects.firstIndex(where: { $0.id == project.id }), index > 0 {
-            let project = appData.projects.remove(at: index)
-            appData.projects.insert(project, at: 0)
+            let movedProject = appData.projects.remove(at: index)
+            appData.projects.insert(movedProject, at: 0)
             DataManager.shared.save(appData)
-            rebuildMenu()
         }
 
         let deviceName = selectedDevice == .iPhone

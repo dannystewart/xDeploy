@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
-        true
+        false // Keep running for menu bar access even when window is closed/hidden
     }
 
     func applicationSupportsSecureRestorableState(_: NSApplication) -> Bool {

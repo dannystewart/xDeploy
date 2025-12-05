@@ -211,10 +211,12 @@ final class MainViewController: NSViewController {
     }
 
     func clearConsole() {
+        guard isViewLoaded else { return }
         consoleTextView.string = ""
     }
 
     func appendToConsole(_ text: String) {
+        guard isViewLoaded else { return }
         consoleTextView.textStorage?.append(NSAttributedString(
             string: text,
             attributes: [
@@ -223,8 +225,10 @@ final class MainViewController: NSViewController {
             ],
         ))
 
-        // Auto-scroll to bottom
-        consoleTextView.scrollToEndOfDocument(nil)
+        // Auto-scroll to bottom only if window is visible
+        if view.window?.isVisible == true {
+            consoleTextView.scrollToEndOfDocument(nil)
+        }
     }
 
     // MARK: - Data
