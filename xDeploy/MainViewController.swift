@@ -706,7 +706,6 @@ extension MainViewController: NSToolbarDelegate {
 
     func toolbarDefaultItemIdentifiers(_: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
-            .flexibleSpace,
             Self.addProjectIdentifier,
             Self.settingsIdentifier,
         ]
@@ -730,6 +729,7 @@ extension MainViewController: NSToolbarDelegate {
             item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "Add Project")
             item.target = self
             item.action = #selector(addProject)
+            item.isNavigational = true
             return item
 
         case Self.settingsIdentifier:
@@ -740,6 +740,7 @@ extension MainViewController: NSToolbarDelegate {
             item.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Settings")
             item.target = self
             item.action = #selector(showSettings)
+            item.isNavigational = true
             return item
 
         default:
