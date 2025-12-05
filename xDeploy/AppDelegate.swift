@@ -70,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentViewController = viewController
         window.center()
         window.setFrameAutosaveName("MainWindow")
-        window.minSize = NSSize(width: 700, height: 450)
+        window.minSize = NSSize(width: 800, height: 500)
 
         // Set up toolbar
         let toolbar = NSToolbar(identifier: "MainToolbar")
