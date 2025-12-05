@@ -146,6 +146,8 @@ final class DeviceButtonView: NSView {
 // MARK: - MainViewController
 
 final class MainViewController: NSViewController {
+    private static let projectDragType = NSPasteboard.PasteboardType("com.xdeploy.project-row")
+
     private var appData: AppData = .empty
     private var selectedProjectIndex: Int?
     private var iPhoneSelected = true
@@ -287,6 +289,9 @@ final class MainViewController: NSViewController {
         projectTableView.gridStyleMask = []
         projectTableView.doubleAction = #selector(editSelectedProject)
         projectTableView.target = self
+
+        // Enable drag-and-drop reordering
+        projectTableView.registerForDraggedTypes([Self.projectDragType])
 
         // Context menu for rows
         let menu = NSMenu()
@@ -622,6 +627,57 @@ final class MainViewController: NSViewController {
 extension MainViewController: NSTableViewDataSource {
     func numberOfRows(in _: NSTableView) -> Int {
         appData.projects.count
+    }
+
+    // MARK: Drag and Drop
+
+    func tableView(_: NSTableView, pasteboardWriterForRow row: Int) -> (any NSPasteboardWriting)? {
+        let item = NSPasteboardItem()
+        item.setString(String(row), forType: Self.projectDragType)
+        return item
+    }
+
+    func tableView(
+        _: NSTableView,
+        validateDrop info: any NSDraggingInfo,
+        proposedRow _: Int,
+        proposedDropOperation operation: NSTableView.DropOperation,
+    ) -> NSDragOperation {
+        // Only allow drops between rows (not on rows)
+        guard operation == .above else { return [] }
+        // Only allow internal drags
+        guard info.draggingSource as? NSTableView === projectTableView else { return [] }
+        return .move
+    }
+
+    func tableView(
+        _ tableView: NSTableView,
+        acceptDrop info: any NSDraggingInfo,
+        row: Int,
+        dropOperation _: NSTableView.DropOperation,
+    ) -> Bool {
+        guard
+            let item = info.draggingPasteboard.pasteboardItems?.first,
+            let rowString = item.string(forType: Self.projectDragType),
+            let sourceRow = Int(rowString) else { return false }
+
+        // Don't move if dropping in the same position
+        guard sourceRow != row, sourceRow + 1 != row else { return false }
+
+        // Move the project in our data
+        let project = appData.projects.remove(at: sourceRow)
+        let destinationRow = sourceRow < row ? row - 1 : row
+        appData.projects.insert(project, at: destinationRow)
+
+        // Animate the row move
+        tableView.moveRow(at: sourceRow, to: destinationRow)
+
+        // Update selection to follow the moved item
+        selectedProjectIndex = destinationRow
+
+        saveData()
+
+        return true
     }
 }
 
