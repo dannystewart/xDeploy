@@ -61,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainViewController = viewController
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 500),
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .unifiedTitleAndToolbar],
             backing: .buffered,
             defer: false,

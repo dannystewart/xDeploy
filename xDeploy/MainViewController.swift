@@ -169,7 +169,7 @@ final class MainViewController: NSViewController {
     private var consoleScrollView: NSScrollView!
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 500))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
     }
 
     override func viewDidLoad() {
@@ -418,6 +418,10 @@ final class MainViewController: NSViewController {
         consoleScrollView.hasHorizontalScroller = false
         consoleScrollView.autohidesScrollers = true
         consoleScrollView.borderType = .bezelBorder
+
+        // Prevent console from forcing window to expand when content is added
+        consoleScrollView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        consoleScrollView.setContentHuggingPriority(.defaultLow, for: .horizontal)
     }
 
     private func createActionButton(title: String, action: Selector) -> NSButton {
