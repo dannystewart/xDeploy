@@ -33,6 +33,32 @@ final class MenuBarManager {
 
         let appData = DataManager.shared.load()
 
+        // Project list
+        if appData.projects.isEmpty {
+            let emptyItem = NSMenuItem(title: "No Projects", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            menu.addItem(emptyItem)
+        } else {
+            for (index, project) in appData.projects.enumerated() {
+                let item = NSMenuItem(
+                    title: "Run \(project.name)",
+                    action: #selector(runProject(_:)),
+                    keyEquivalent: "",
+                )
+                item.target = self
+                item.representedObject = project
+                menu.addItem(item)
+
+                // Add divider after the first (most recent) project
+                if index == 0, appData.projects.count > 1 {
+                    menu.addItem(.separator())
+                }
+            }
+        }
+
+        // Divider
+        menu.addItem(.separator())
+
         // Device selection
         let iPhoneItem = NSMenuItem(
             title: "Run on iPhone",
@@ -52,27 +78,6 @@ final class MenuBarManager {
         iPadItem.state = selectedDevice == .iPad ? .on : .off
         menu.addItem(iPadItem)
 
-        // Divider
-        menu.addItem(.separator())
-
-        // Project list
-        if appData.projects.isEmpty {
-            let emptyItem = NSMenuItem(title: "No Projects", action: nil, keyEquivalent: "")
-            emptyItem.isEnabled = false
-            menu.addItem(emptyItem)
-        } else {
-            for project in appData.projects {
-                let item = NSMenuItem(
-                    title: "Run \(project.name)",
-                    action: #selector(runProject(_:)),
-                    keyEquivalent: "",
-                )
-                item.target = self
-                item.representedObject = project
-                menu.addItem(item)
-            }
-        }
-
         statusItem?.menu = menu
     }
 
@@ -89,7 +94,15 @@ final class MenuBarManager {
     @objc private func runProject(_ sender: NSMenuItem) {
         guard let project = sender.representedObject as? Project else { return }
 
-        let appData = DataManager.shared.load()
+        // Move this project to the top of the list
+        var appData = DataManager.shared.load()
+        if let index = appData.projects.firstIndex(where: { $0.id == project.id }), index > 0 {
+            let project = appData.projects.remove(at: index)
+            appData.projects.insert(project, at: 0)
+            DataManager.shared.save(appData)
+            rebuildMenu()
+        }
+
         let deviceName = selectedDevice == .iPhone
             ? appData.deviceConfig.iPhoneName
             : appData.deviceConfig.iPadName
