@@ -592,24 +592,26 @@ extension MainViewController: NSTableViewDelegate {
 
                 titleField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 8),
                 titleField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor, constant: -8),
-                titleField.topAnchor.constraint(equalTo: cellView!.topAnchor, constant: 6),
+                titleField.bottomAnchor.constraint(equalTo: cellView!.centerYAnchor),
 
                 pathField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
                 pathField.trailingAnchor.constraint(equalTo: titleField.trailingAnchor),
-                pathField.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 1),
+                pathField.topAnchor.constraint(equalTo: cellView!.centerYAnchor, constant: 1),
             ])
         }
 
         let project = appData.projects[row]
         cellView?.textField?.stringValue = project.name
 
-        // Set path with ~ abbreviation
+        // Set folder path with ~ abbreviation
         if let pathField = cellView?.viewWithTag(Self.pathTagBase) as? NSTextField {
-            let path = project.projectPath
+            let folderPath = URL(fileURLWithPath: project.projectPath)
+                .deletingLastPathComponent()
+                .path
             let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
-            let displayPath = path.hasPrefix(homeDir)
-                ? "~" + path.dropFirst(homeDir.count)
-                : path
+            let displayPath = folderPath.hasPrefix(homeDir)
+                ? "~" + folderPath.dropFirst(homeDir.count)
+                : folderPath
             pathField.stringValue = displayPath
         }
 
