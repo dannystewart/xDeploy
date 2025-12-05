@@ -155,11 +155,6 @@ final class MainViewController: NSViewController {
     private let projectTableView: NSTableView = .init()
     private let statusLabel: NSTextField = .init(labelWithString: "Select a project")
 
-    // Left side buttons
-    private var addButton: NSButton!
-    private var editButton: NSButton!
-    private var deleteButton: NSButton!
-
     // Right side buttons
     private var iPhoneButton: DeviceButtonView!
     private var iPadButton: DeviceButtonView!
@@ -176,6 +171,24 @@ final class MainViewController: NSViewController {
         setupUI()
         reloadProjects()
         updateButtonStates()
+
+        // Add keyboard shortcut monitoring for ⌘+Backspace
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+            if
+                event.modifierFlags.contains(.command),
+                event.keyCode == 51 // Backspace
+            {
+                if
+                    view.window?.firstResponder === projectTableView,
+                    selectedProjectIndex != nil
+                {
+                    removeSelectedProject()
+                    return nil
+                }
+            }
+            return event
+        }
     }
 
     @objc func addProject() {
@@ -256,6 +269,15 @@ final class MainViewController: NSViewController {
         projectTableView.allowsEmptySelection = true
         projectTableView.usesAlternatingRowBackgroundColors = true
         projectTableView.gridStyleMask = []
+        projectTableView.doubleAction = #selector(editSelectedProject)
+        projectTableView.target = self
+
+        // Context menu for rows
+        let menu = NSMenu()
+        menu.delegate = self
+        menu.addItem(NSMenuItem(title: "Edit", action: #selector(editClickedProject), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Delete", action: #selector(deleteClickedProject), keyEquivalent: ""))
+        projectTableView.menu = menu
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("ProjectColumn"))
         column.title = "Projects"
@@ -269,35 +291,11 @@ final class MainViewController: NSViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(scrollView)
 
-        // Bottom button row: Add, Edit, Delete
-        let buttonRow = NSStackView()
-        buttonRow.orientation = .horizontal
-        buttonRow.spacing = 12
-        buttonRow.translatesAutoresizingMaskIntoConstraints = false
-
-        addButton = NSButton(title: "Add", target: self, action: #selector(addProject))
-        addButton.bezelStyle = .rounded
-
-        editButton = NSButton(title: "Edit", target: self, action: #selector(editSelectedProject))
-        editButton.bezelStyle = .rounded
-
-        deleteButton = NSButton(title: "Delete", target: self, action: #selector(removeSelectedProject))
-        deleteButton.bezelStyle = .rounded
-
-        buttonRow.addArrangedSubview(addButton)
-        buttonRow.addArrangedSubview(editButton)
-        buttonRow.addArrangedSubview(deleteButton)
-
-        container.addSubview(buttonRow)
-
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
             scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
             scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
-            scrollView.bottomAnchor.constraint(equalTo: buttonRow.topAnchor, constant: -16),
-
-            buttonRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
-            buttonRow.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16),
+            scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8),
         ])
 
         return container
@@ -389,10 +387,6 @@ final class MainViewController: NSViewController {
         let hasSelection = selectedProjectIndex != nil && selectedProjectIndex! < appData.projects.count
         let hasDevice = iPhoneSelected || iPadSelected
 
-        // Left side buttons
-        editButton.isEnabled = hasSelection
-        deleteButton.isEnabled = hasSelection
-
         // Right side buttons
         installButton.isEnabled = hasSelection && hasDevice
         runButton.isEnabled = hasSelection && hasDevice
@@ -481,9 +475,6 @@ final class MainViewController: NSViewController {
     }
 
     private func setUIEnabled(_ enabled: Bool) {
-        addButton.isEnabled = enabled
-        editButton.isEnabled = enabled
-        deleteButton.isEnabled = enabled
         iPhoneButton.isEnabled = enabled
         iPadButton.isEnabled = enabled
         installButton.isEnabled = enabled
@@ -591,6 +582,58 @@ extension MainViewController: NSTableViewDelegate {
     }
 }
 
+// MARK: NSMenuDelegate
+
+extension MainViewController: NSMenuDelegate {
+    private static var clickedRow: Int = -1
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard
+            menu === projectTableView.menu,
+            let window = projectTableView.window else { return }
+
+        let screenPoint = NSEvent.mouseLocation
+        let windowPoint = window.convertPoint(fromScreen: screenPoint)
+        let tablePoint = projectTableView.convert(windowPoint, from: nil)
+        Self.clickedRow = projectTableView.row(at: tablePoint)
+
+        // Enable/disable menu items based on clicked row
+        let hasClickedRow = Self.clickedRow >= 0
+        for item in menu.items {
+            item.isEnabled = hasClickedRow
+        }
+    }
+
+    @objc func editClickedProject() {
+        guard Self.clickedRow >= 0, Self.clickedRow < appData.projects.count else { return }
+        let project = appData.projects[Self.clickedRow]
+        showProjectEditor(project: project)
+    }
+
+    @objc func deleteClickedProject() {
+        guard Self.clickedRow >= 0, Self.clickedRow < appData.projects.count else { return }
+        let project = appData.projects[Self.clickedRow]
+
+        let alert = NSAlert()
+        alert.messageText = "Delete \(project.name)?"
+        alert.informativeText = "This cannot be undone."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            appData.projects.remove(at: Self.clickedRow)
+            if selectedProjectIndex == Self.clickedRow {
+                selectedProjectIndex = nil
+            } else if let selected = selectedProjectIndex, selected > Self.clickedRow {
+                selectedProjectIndex = selected - 1
+            }
+            saveData()
+            reloadProjects()
+        }
+    }
+}
+
 // MARK: NSToolbarDelegate
 
 extension MainViewController: NSToolbarDelegate {
@@ -599,8 +642,8 @@ extension MainViewController: NSToolbarDelegate {
 
     func toolbarDefaultItemIdentifiers(_: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
-            Self.addProjectIdentifier,
             .flexibleSpace,
+            Self.addProjectIdentifier,
             Self.settingsIdentifier,
         ]
     }
