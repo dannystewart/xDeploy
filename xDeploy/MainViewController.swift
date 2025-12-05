@@ -11,7 +11,8 @@ final class DeviceButtonView: NSView {
         didSet { updateAppearance() }
     }
 
-    var onToggle: ((Bool) -> Void)?
+    /// Called when clicked. Parameter is `true` if ⌘ was held.
+    var onClick: ((Bool) -> Void)?
 
     private let iconView: NSImageView
     private let label: NSTextField
@@ -102,8 +103,8 @@ final class DeviceButtonView: NSView {
 
         let location = convert(event.locationInWindow, from: nil)
         if bounds.contains(location) {
-            isSelected.toggle()
-            onToggle?(isSelected)
+            let isCommandClick = event.modifierFlags.contains(.command)
+            onClick?(isCommandClick)
         }
 
         updateAppearance()
@@ -317,15 +318,31 @@ final class MainViewController: NSViewController {
         deviceRow.spacing = 20
 
         iPhoneButton = DeviceButtonView(title: "iPhone", symbolName: "iphone")
-        iPhoneButton.onToggle = { [weak self] selected in
-            self?.iPhoneSelected = selected
-            self?.updateButtonStates()
+        iPhoneButton.onClick = { [weak self] isCommandClick in
+            guard let self else { return }
+            if isCommandClick {
+                // ⌘-click: toggle iPhone
+                iPhoneSelected.toggle()
+            } else {
+                // Regular click: select only iPhone
+                iPhoneSelected = true
+                iPadSelected = false
+            }
+            updateButtonStates()
         }
 
         iPadButton = DeviceButtonView(title: "iPad", symbolName: "ipad.landscape")
-        iPadButton.onToggle = { [weak self] selected in
-            self?.iPadSelected = selected
-            self?.updateButtonStates()
+        iPadButton.onClick = { [weak self] isCommandClick in
+            guard let self else { return }
+            if isCommandClick {
+                // ⌘-click: toggle iPad
+                iPadSelected.toggle()
+            } else {
+                // Regular click: select only iPad
+                iPhoneSelected = false
+                iPadSelected = true
+            }
+            updateButtonStates()
         }
 
         deviceRow.addArrangedSubview(iPhoneButton)
