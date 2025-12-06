@@ -594,8 +594,10 @@ final class MainViewController: NSViewController {
     }
 
     @objc private func editSelectedProject() {
-        guard let index = selectedProjectIndex, index < appData.projects.count else { return }
-        let project = appData.projects[index]
+        // Only edit if double-clicked on an actual row
+        let clickedRow = projectTableView.clickedRow
+        guard clickedRow >= 0, clickedRow < appData.projects.count else { return }
+        let project = appData.projects[clickedRow]
         showProjectEditor(project: project)
     }
 
@@ -782,6 +784,14 @@ extension MainViewController: NSTableViewDelegate {
         cellView?.imageView?.image = NSWorkspace.shared.icon(forFile: url.path)
 
         return cellView
+    }
+
+    func tableView(_ tableView: NSTableView, selectionIndexesForProposedSelection proposedSelectionIndexes: IndexSet) -> IndexSet {
+        // Prevent deselection once a project is selected
+        if proposedSelectionIndexes.isEmpty, tableView.selectedRow >= 0 {
+            return tableView.selectedRowIndexes
+        }
+        return proposedSelectionIndexes
     }
 
     func tableViewSelectionDidChange(_: Notification) {
