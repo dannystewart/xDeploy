@@ -464,8 +464,13 @@ final class MainViewController: NSViewController {
         let hasDevice = iPhoneSelected || iPadSelected
 
         // Right side buttons
-        installButton.isEnabled = hasSelection && hasDevice
-        runButton.isEnabled = hasSelection && hasDevice
+        let buttonsEnabled = hasSelection && hasDevice
+        installButton.isEnabled = buttonsEnabled
+        runButton.isEnabled = buttonsEnabled
+
+        // Update button text colors to be more visually distinct
+        updateActionButtonAppearance(installButton, enabled: buttonsEnabled)
+        updateActionButtonAppearance(runButton, enabled: buttonsEnabled)
 
         // Update device button states
         iPhoneButton.isSelected = iPhoneSelected
@@ -483,6 +488,18 @@ final class MainViewController: NSViewController {
             if iPadSelected { devices.append("iPad") }
             statusLabel.stringValue = "\(project.name) → \(devices.joined(separator: " & "))"
         }
+    }
+
+    private func updateActionButtonAppearance(_ button: NSButton, enabled: Bool) {
+        let color: NSColor = enabled ? .textColor : .disabledControlTextColor
+        let attributedTitle = NSAttributedString(
+            string: button.title,
+            attributes: [
+                .foregroundColor: color,
+                .font: NSFont.systemFont(ofSize: 20, weight: .regular),
+            ],
+        )
+        button.attributedTitle = attributedTitle
     }
 
     @objc private func performInstall() {
