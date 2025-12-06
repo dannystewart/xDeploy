@@ -10,9 +10,11 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var selectedDevice: Device = .iPhone
     private weak var mainViewController: MainViewController?
+    private var showWindowHandler: (() -> Void)?
 
-    init(mainViewController: MainViewController) {
+    init(mainViewController: MainViewController, showWindowHandler: @escaping () -> Void) {
         self.mainViewController = mainViewController
+        self.showWindowHandler = showWindowHandler
         super.init()
         setupStatusItem()
     }
@@ -68,6 +70,29 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
         iPadItem.target = self
         iPadItem.state = selectedDevice == .iPad ? .on : .off
         menu.addItem(iPadItem)
+
+        // Divider before app actions
+        menu.addItem(.separator())
+
+        // Show Window
+        let showWindowItem = NSMenuItem(
+            title: "Show xDeploy Window",
+            action: #selector(showWindow),
+            keyEquivalent: "",
+        )
+        showWindowItem.target = self
+        menu.addItem(showWindowItem)
+
+        // Divider before quit
+        menu.addItem(.separator())
+
+        // Quit
+        let quitItem = NSMenuItem(
+            title: "Quit xDeploy",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q",
+        )
+        menu.addItem(quitItem)
     }
 
     private func setupStatusItem() {
@@ -90,6 +115,10 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
 
     @objc private func selectiPad() {
         selectedDevice = .iPad
+    }
+
+    @objc private func showWindow() {
+        showWindowHandler?()
     }
 
     @objc private func runProject(_ sender: NSMenuItem) {

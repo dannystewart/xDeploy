@@ -5,12 +5,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mainViewController: MainViewController?
     private var menuBarManager: MenuBarManager?
 
+    func applicationWillFinishLaunching(_: Notification) {
+        // Set accessory policy early to prevent focus stealing on launch
+        NSApp.setActivationPolicy(.accessory)
+    }
+
     func applicationDidFinishLaunching(_: Notification) {
         setupMainMenu()
         setupMainWindow()
         if let viewController = mainViewController {
-            menuBarManager = MenuBarManager(mainViewController: viewController)
+            menuBarManager = MenuBarManager(mainViewController: viewController, showWindowHandler: { [weak self] in
+                self?.showMainWindow()
+            })
         }
+
+        // Explicitly give up focus after setup
+        NSApp.deactivate()
+    }
+
+    func showMainWindow() {
+        mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -89,7 +103,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.toolbar = toolbar
         window.toolbarStyle = .unified
 
-        window.makeKeyAndOrderFront(nil)
         mainWindow = window
     }
 }
