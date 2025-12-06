@@ -387,6 +387,13 @@ final class MainViewController: NSViewController {
         installButton = createActionButton(title: "Install", action: #selector(performInstall))
         runButton = createActionButton(title: "Run", action: #selector(performRun))
 
+        // Make buttons layer-backed for custom backgrounds
+        for button in [installButton!, runButton!] {
+            button.wantsLayer = true
+            button.layer?.cornerRadius = 6
+            button.isBordered = false
+        }
+
         actionRow.addArrangedSubview(installButton)
         actionRow.addArrangedSubview(runButton)
 
@@ -468,9 +475,9 @@ final class MainViewController: NSViewController {
         installButton.isEnabled = buttonsEnabled
         runButton.isEnabled = buttonsEnabled
 
-        // Update button text colors to be more visually distinct
-        updateActionButtonAppearance(installButton, enabled: buttonsEnabled)
-        updateActionButtonAppearance(runButton, enabled: buttonsEnabled)
+        // Update button appearances
+        updateInstallButtonAppearance(enabled: buttonsEnabled)
+        updateRunButtonAppearance(enabled: buttonsEnabled)
 
         // Update device button states
         iPhoneButton.isSelected = iPhoneSelected
@@ -490,16 +497,32 @@ final class MainViewController: NSViewController {
         }
     }
 
-    private func updateActionButtonAppearance(_ button: NSButton, enabled: Bool) {
-        let color: NSColor = enabled ? .textColor : .disabledControlTextColor
-        let attributedTitle = NSAttributedString(
-            string: button.title,
+    private func updateInstallButtonAppearance(enabled: Bool) {
+        let backgroundColor: NSColor = enabled ? .systemFill : .secondarySystemFill
+        let textColor: NSColor = enabled ? .white : .disabledControlTextColor
+
+        installButton.layer?.backgroundColor = backgroundColor.cgColor
+        installButton.attributedTitle = NSAttributedString(
+            string: installButton.title,
             attributes: [
-                .foregroundColor: color,
+                .foregroundColor: textColor,
                 .font: NSFont.systemFont(ofSize: 20, weight: .regular),
             ],
         )
-        button.attributedTitle = attributedTitle
+    }
+
+    private func updateRunButtonAppearance(enabled: Bool) {
+        let backgroundColor: NSColor = enabled ? .systemGreen : .secondarySystemFill
+        let textColor: NSColor = enabled ? .white : .disabledControlTextColor
+
+        runButton.layer?.backgroundColor = backgroundColor.cgColor
+        runButton.attributedTitle = NSAttributedString(
+            string: runButton.title,
+            attributes: [
+                .foregroundColor: textColor,
+                .font: NSFont.systemFont(ofSize: 20, weight: .regular),
+            ],
+        )
     }
 
     @objc private func performInstall() {
