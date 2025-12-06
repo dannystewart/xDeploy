@@ -115,8 +115,8 @@ final class DeviceButtonView: NSView {
         let contentColor: NSColor
 
         if !isEnabled {
-            backgroundColor = NSColor.quaternaryLabelColor.withAlphaComponent(0.3)
-            contentColor = .tertiaryLabelColor
+            backgroundColor = .secondarySystemFill
+            contentColor = .disabledControlTextColor
         } else if isSelected {
             if isPressed {
                 backgroundColor = NSColor.controlAccentColor.blended(withFraction: 0.2, of: .black) ?? .controlAccentColor
