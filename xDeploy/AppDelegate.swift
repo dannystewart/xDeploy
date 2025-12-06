@@ -32,6 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false // Keep running for menu bar access even when window is closed/hidden
     }
 
+    func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
+        showMainWindow()
+        return false // We handled it ourselves
+    }
+
     func applicationSupportsSecureRestorableState(_: NSApplication) -> Bool {
         true
     }
