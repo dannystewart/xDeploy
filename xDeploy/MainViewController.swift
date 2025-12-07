@@ -2,8 +2,10 @@ import AppKit
 
 // MARK: - DeviceButtonView
 
+/// A large button with an icon and label, used for device selection.
+/// Lights up blue when `isDeploying` is true.
 final class DeviceButtonView: NSView {
-    var isSelected: Bool = false {
+    var isDeploying: Bool = false {
         didSet { updateAppearance() }
     }
 
@@ -11,8 +13,7 @@ final class DeviceButtonView: NSView {
         didSet { updateAppearance() }
     }
 
-    /// Called when clicked. Parameter is `true` if ⌘ was held.
-    var onClick: ((Bool) -> Void)?
+    var onClick: (() -> Void)?
 
     private let iconView: NSImageView
     private let label: NSTextField
@@ -103,8 +104,7 @@ final class DeviceButtonView: NSView {
 
         let location = convert(event.locationInWindow, from: nil)
         if bounds.contains(location) {
-            let isCommandClick = event.modifierFlags.contains(.command)
-            onClick?(isCommandClick)
+            onClick?()
         }
 
         updateAppearance()
@@ -117,7 +117,8 @@ final class DeviceButtonView: NSView {
         if !isEnabled {
             backgroundColor = .secondarySystemFill
             contentColor = .disabledControlTextColor
-        } else if isSelected {
+        } else if isDeploying {
+            // Blue highlight while deploying
             if isPressed {
                 backgroundColor = NSColor.controlAccentColor.blended(withFraction: 0.2, of: .black) ?? .controlAccentColor
             } else if isHovered {
@@ -143,15 +144,143 @@ final class DeviceButtonView: NSView {
     }
 }
 
+// MARK: - ActionButtonView
+
+/// A text-only button for action selection (Install/Run).
+/// Shows green highlight when selected.
+final class ActionButtonView: NSView {
+    var isSelected: Bool = false {
+        didSet { updateAppearance() }
+    }
+
+    var isEnabled: Bool = true {
+        didSet { updateAppearance() }
+    }
+
+    var onClick: (() -> Void)?
+
+    private let label: NSTextField
+    private var trackingArea: NSTrackingArea?
+
+    private var isHovered = false
+    private var isPressed = false
+
+    init(title: String) {
+        label = NSTextField(labelWithString: title)
+
+        super.init(frame: .zero)
+
+        wantsLayer = true
+        layer?.cornerRadius = 6
+
+        label.font = .systemFont(ofSize: 20, weight: .regular)
+        label.alignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+
+        updateAppearance()
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let existing = trackingArea {
+            removeTrackingArea(existing)
+        }
+        trackingArea = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeInKeyWindow],
+            owner: self,
+            userInfo: nil,
+        )
+        addTrackingArea(trackingArea!)
+    }
+
+    override func mouseEntered(with _: NSEvent) {
+        guard isEnabled else { return }
+        isHovered = true
+        updateAppearance()
+    }
+
+    override func mouseExited(with _: NSEvent) {
+        isHovered = false
+        isPressed = false
+        updateAppearance()
+    }
+
+    override func mouseDown(with _: NSEvent) {
+        guard isEnabled else { return }
+        isPressed = true
+        updateAppearance()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard isEnabled, isPressed else { return }
+        isPressed = false
+
+        let location = convert(event.locationInWindow, from: nil)
+        if bounds.contains(location) {
+            onClick?()
+        }
+
+        updateAppearance()
+    }
+
+    private func updateAppearance() {
+        let backgroundColor: NSColor
+        let textColor: NSColor
+
+        if !isEnabled {
+            backgroundColor = .secondarySystemFill
+            textColor = .disabledControlTextColor
+        } else if isSelected {
+            // Green highlight when selected
+            if isPressed {
+                backgroundColor = NSColor.systemGreen.blended(withFraction: 0.2, of: .black) ?? .systemGreen
+            } else if isHovered {
+                backgroundColor = NSColor.systemGreen.blended(withFraction: 0.1, of: .white) ?? .systemGreen
+            } else {
+                backgroundColor = .systemGreen
+            }
+            textColor = .white
+        } else {
+            if isPressed {
+                backgroundColor = NSColor.gray.withAlphaComponent(0.45)
+            } else if isHovered {
+                backgroundColor = NSColor.gray.withAlphaComponent(0.35)
+            } else {
+                backgroundColor = NSColor.gray.withAlphaComponent(0.25)
+            }
+            textColor = .labelColor
+        }
+
+        layer?.backgroundColor = backgroundColor.cgColor
+        label.textColor = textColor
+    }
+}
+
 // MARK: - MainViewController
 
 final class MainViewController: NSViewController {
+    private enum DeviceType {
+        case iPhone
+        case iPad
+    }
+
     private static let projectDragType = NSPasteboard.PasteboardType("com.xdeploy.project-row")
 
     private var appData: AppData = .empty
     private var selectedProjectIndex: Int?
-    private var iPhoneSelected = true
-    private var iPadSelected = false
+    private var isRunMode = true // true = Run, false = Install
 
     // MARK: - UI Elements
 
@@ -161,12 +290,14 @@ final class MainViewController: NSViewController {
     // Right side buttons
     private var iPhoneButton: DeviceButtonView!
     private var iPadButton: DeviceButtonView!
-    private var installButton: NSButton!
-    private var runButton: NSButton!
+    private var installButton: ActionButtonView!
+    private var runButton: ActionButtonView!
 
     // Console output
     private var consoleTextView: NSTextView!
     private var consoleScrollView: NSScrollView!
+
+    private var deployingDevice: DeviceType?
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
@@ -343,62 +474,49 @@ final class MainViewController: NSViewController {
         gridStack.spacing = 20
         gridStack.translatesAutoresizingMaskIntoConstraints = false
 
-        // Device row (iPhone / iPad) - big square buttons
-        let deviceRow = NSStackView()
-        deviceRow.orientation = .horizontal
-        deviceRow.spacing = 20
-
-        iPhoneButton = DeviceButtonView(title: "iPhone", symbolName: "iphone")
-        iPhoneButton.onClick = { [weak self] isCommandClick in
-            guard let self else { return }
-            if isCommandClick {
-                // ⌘-click: toggle iPhone
-                iPhoneSelected.toggle()
-            } else {
-                // Regular click: select only iPhone
-                iPhoneSelected = true
-                iPadSelected = false
-            }
-            updateButtonStates()
-        }
-
-        iPadButton = DeviceButtonView(title: "iPad", symbolName: "ipad.landscape")
-        iPadButton.onClick = { [weak self] isCommandClick in
-            guard let self else { return }
-            if isCommandClick {
-                // ⌘-click: toggle iPad
-                iPadSelected.toggle()
-            } else {
-                // Regular click: select only iPad
-                iPhoneSelected = false
-                iPadSelected = true
-            }
-            updateButtonStates()
-        }
-
-        deviceRow.addArrangedSubview(iPhoneButton)
-        deviceRow.addArrangedSubview(iPadButton)
-
-        // Action row (Install / Run) - shorter, text only
+        // Action row (Install / Run) - on top, selects the mode
         let actionRow = NSStackView()
         actionRow.orientation = .horizontal
         actionRow.spacing = 20
 
-        installButton = createActionButton(title: "Install", action: #selector(performInstall))
-        runButton = createActionButton(title: "Run", action: #selector(performRun))
+        installButton = ActionButtonView(title: "Install")
+        installButton.onClick = { [weak self] in
+            guard let self else { return }
+            isRunMode = false
+            updateButtonStates()
+        }
 
-        // Make buttons layer-backed for custom backgrounds
-        for button in [installButton!, runButton!] {
-            button.wantsLayer = true
-            button.layer?.cornerRadius = 6
-            button.isBordered = false
+        runButton = ActionButtonView(title: "Run")
+        runButton.onClick = { [weak self] in
+            guard let self else { return }
+            isRunMode = true
+            updateButtonStates()
         }
 
         actionRow.addArrangedSubview(installButton)
         actionRow.addArrangedSubview(runButton)
 
-        gridStack.addArrangedSubview(deviceRow)
+        // Device row (iPhone / iPad) - below, triggers the action
+        let deviceRow = NSStackView()
+        deviceRow.orientation = .horizontal
+        deviceRow.spacing = 20
+
+        iPhoneButton = DeviceButtonView(title: "iPhone", symbolName: "iphone")
+        iPhoneButton.onClick = { [weak self] in
+            self?.performDeploymentToDevice(.iPhone)
+        }
+
+        iPadButton = DeviceButtonView(title: "iPad", symbolName: "ipad.landscape")
+        iPadButton.onClick = { [weak self] in
+            self?.performDeploymentToDevice(.iPad)
+        }
+
+        deviceRow.addArrangedSubview(iPhoneButton)
+        deviceRow.addArrangedSubview(iPadButton)
+
+        // Action row first (top), then device row (bottom)
         gridStack.addArrangedSubview(actionRow)
+        gridStack.addArrangedSubview(deviceRow)
 
         container.addSubview(gridStack)
 
@@ -452,13 +570,6 @@ final class MainViewController: NSViewController {
         consoleScrollView.setContentHuggingPriority(.defaultLow, for: .horizontal)
     }
 
-    private func createActionButton(title: String, action: Selector) -> NSButton {
-        let button = NSButton(title: title, target: self, action: action)
-        button.bezelStyle = .texturedSquare
-        button.font = .systemFont(ofSize: 20, weight: .regular)
-        return button
-    }
-
     // MARK: - Projects
 
     private func reloadProjects() {
@@ -468,134 +579,98 @@ final class MainViewController: NSViewController {
 
     private func updateButtonStates() {
         let hasSelection = selectedProjectIndex != nil && selectedProjectIndex! < appData.projects.count
-        let hasDevice = iPhoneSelected || iPadSelected
 
-        // Right side buttons
-        let buttonsEnabled = hasSelection && hasDevice
-        installButton.isEnabled = buttonsEnabled
-        runButton.isEnabled = buttonsEnabled
+        // Action buttons are always enabled (for mode selection)
+        installButton.isSelected = !isRunMode
+        runButton.isSelected = isRunMode
 
-        // Update button appearances
-        updateInstallButtonAppearance(enabled: buttonsEnabled)
-        updateRunButtonAppearance(enabled: buttonsEnabled)
+        // Device buttons enabled only when a project is selected
+        iPhoneButton.isEnabled = hasSelection
+        iPadButton.isEnabled = hasSelection
 
-        // Update device button states
-        iPhoneButton.isSelected = iPhoneSelected
-        iPadButton.isSelected = iPadSelected
+        // Update deploying state
+        iPhoneButton.isDeploying = deployingDevice == .iPhone
+        iPadButton.isDeploying = deployingDevice == .iPad
 
         // Update status
         if !hasSelection {
             statusLabel.stringValue = appData.projects.isEmpty ? "Add a project to get started" : "Select a project"
-        } else if !hasDevice {
-            statusLabel.stringValue = "Select at least one device"
         } else {
             let project = appData.projects[selectedProjectIndex!]
-            var devices = [String]()
-            if iPhoneSelected { devices.append("iPhone") }
-            if iPadSelected { devices.append("iPad") }
-            statusLabel.stringValue = "\(project.name) → \(devices.joined(separator: " & "))"
+            let action = isRunMode ? "Run" : "Install"
+            statusLabel.stringValue = "\(action) \(project.name) on..."
         }
     }
 
-    private func updateInstallButtonAppearance(enabled: Bool) {
-        let backgroundColor: NSColor = enabled ? .systemFill : .secondarySystemFill
-        let textColor: NSColor = enabled ? .white : .disabledControlTextColor
-
-        installButton.layer?.backgroundColor = backgroundColor.cgColor
-        installButton.attributedTitle = NSAttributedString(
-            string: installButton.title,
-            attributes: [
-                .foregroundColor: textColor,
-                .font: NSFont.systemFont(ofSize: 20, weight: .regular),
-            ],
-        )
-    }
-
-    private func updateRunButtonAppearance(enabled: Bool) {
-        let backgroundColor: NSColor = enabled ? .systemGreen : .secondarySystemFill
-        let textColor: NSColor = enabled ? .white : .disabledControlTextColor
-
-        runButton.layer?.backgroundColor = backgroundColor.cgColor
-        runButton.attributedTitle = NSAttributedString(
-            string: runButton.title,
-            attributes: [
-                .foregroundColor: textColor,
-                .font: NSFont.systemFont(ofSize: 20, weight: .regular),
-            ],
-        )
-    }
-
-    @objc private func performInstall() {
+    private func performDeploymentToDevice(_ deviceType: DeviceType) {
         guard let index = selectedProjectIndex, index < appData.projects.count else { return }
         let project = appData.projects[index]
-        performDeployment(project: project, includeRun: false)
-    }
 
-    @objc private func performRun() {
-        guard let index = selectedProjectIndex, index < appData.projects.count else { return }
-        let project = appData.projects[index]
-        performDeployment(project: project, includeRun: true)
-    }
+        let deviceName: String
+        let deviceLabel: String
+        switch deviceType {
+        case .iPhone:
+            deviceName = appData.deviceConfig.iPhoneName
+            deviceLabel = "iPhone"
 
-    private func performDeployment(project: Project, includeRun: Bool) {
-        var devices = [String]()
-        if iPhoneSelected { devices.append(appData.deviceConfig.iPhoneName) }
-        if iPadSelected { devices.append(appData.deviceConfig.iPadName) }
+        case .iPad:
+            deviceName = appData.deviceConfig.iPadName
+            deviceLabel = "iPad"
+        }
 
-        guard !devices.isEmpty else { return }
-
+        deployingDevice = deviceType
         setUIEnabled(false)
         clearConsole()
 
         Task {
             do {
-                for device in devices {
-                    if includeRun {
-                        try await DeploymentManager.shared.deployRun(
-                            project: project,
-                            deviceName: device,
-                            statusHandler: { [weak self] status in
-                                guard let self else { return }
-                                Task { @MainActor in
-                                    self.statusLabel.stringValue = status
-                                }
-                            },
-                            outputHandler: { [weak self] output in
-                                guard let self else { return }
-                                Task { @MainActor in
-                                    self.appendToConsole(output)
-                                }
-                            },
-                        )
-                    } else {
-                        try await DeploymentManager.shared.deployInstall(
-                            project: project,
-                            deviceName: device,
-                            statusHandler: { [weak self] status in
-                                guard let self else { return }
-                                Task { @MainActor in
-                                    self.statusLabel.stringValue = status
-                                }
-                            },
-                            outputHandler: { [weak self] output in
-                                guard let self else { return }
-                                Task { @MainActor in
-                                    self.appendToConsole(output)
-                                }
-                            },
-                        )
-                    }
+                if isRunMode {
+                    try await DeploymentManager.shared.deployRun(
+                        project: project,
+                        deviceName: deviceName,
+                        statusHandler: { [weak self] status in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.statusLabel.stringValue = status
+                            }
+                        },
+                        outputHandler: { [weak self] output in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.appendToConsole(output)
+                            }
+                        },
+                    )
+                } else {
+                    try await DeploymentManager.shared.deployInstall(
+                        project: project,
+                        deviceName: deviceName,
+                        statusHandler: { [weak self] status in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.statusLabel.stringValue = status
+                            }
+                        },
+                        outputHandler: { [weak self] output in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.appendToConsole(output)
+                            }
+                        },
+                    )
                 }
 
                 await MainActor.run {
-                    let action = includeRun ? "running" : "installed"
-                    statusLabel.stringValue = "✓ \(project.name) \(action) on \(devices.joined(separator: " & "))"
+                    let action = isRunMode ? "running" : "installed"
+                    statusLabel.stringValue = "✓ \(project.name) \(action) on \(deviceLabel)"
+                    deployingDevice = nil
                     setUIEnabled(true)
                 }
             } catch {
                 await MainActor.run {
                     appendToConsole("\n✗ Error: \(error.localizedDescription)\n")
                     statusLabel.stringValue = "✗ Error: \(error.localizedDescription)"
+                    deployingDevice = nil
                     setUIEnabled(true)
 
                     let alert = NSAlert()
@@ -611,9 +686,9 @@ final class MainViewController: NSViewController {
     private func setUIEnabled(_ enabled: Bool) {
         iPhoneButton.isEnabled = enabled
         iPadButton.isEnabled = enabled
-        installButton.isEnabled = enabled
-        runButton.isEnabled = enabled
+        // Action buttons always stay enabled for mode switching
         projectTableView.isEnabled = enabled
+        updateButtonStates()
     }
 
     @objc private func editSelectedProject() {
