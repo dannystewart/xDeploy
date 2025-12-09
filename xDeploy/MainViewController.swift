@@ -181,7 +181,7 @@ final class MainViewController: NSViewController {
     private var deployingDevice: DeviceType?
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 660, height: 450))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 660, height: 356))
     }
 
     override func viewDidLoad() {
