@@ -189,6 +189,7 @@ final class MainViewController: NSViewController {
         loadData()
         setupUI()
         reloadProjects()
+        restoreSelectedProject()
         updateButtonStates()
 
         // Add keyboard shortcut monitoring for ⌘+Backspace
@@ -251,6 +252,15 @@ final class MainViewController: NSViewController {
 
     private func saveData() {
         DataManager.shared.save(appData)
+    }
+
+    private func restoreSelectedProject() {
+        guard
+            let savedID = appData.selectedProjectID,
+            let index = appData.projects.firstIndex(where: { $0.id == savedID }) else { return }
+
+        selectedProjectIndex = index
+        projectTableView.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
     }
 
     // MARK: - UI Setup
@@ -557,6 +567,7 @@ final class MainViewController: NSViewController {
         if alert.runModal() == .alertFirstButtonReturn {
             appData.projects.remove(at: index)
             selectedProjectIndex = nil
+            appData.selectedProjectID = nil
             saveData()
             reloadProjects()
         }
@@ -738,6 +749,15 @@ extension MainViewController: NSTableViewDelegate {
     func tableViewSelectionDidChange(_: Notification) {
         let selectedRow = projectTableView.selectedRow
         selectedProjectIndex = selectedRow >= 0 ? selectedRow : nil
+
+        // Remember the selected project for next launch
+        if let index = selectedProjectIndex, index < appData.projects.count {
+            appData.selectedProjectID = appData.projects[index].id
+        } else {
+            appData.selectedProjectID = nil
+        }
+        saveData()
+
         updateButtonStates()
     }
 }
@@ -782,11 +802,17 @@ extension MainViewController: NSMenuDelegate {
         alert.addButton(withTitle: "Cancel")
 
         if alert.runModal() == .alertFirstButtonReturn {
+            let deletedProjectID = appData.projects[Self.clickedRow].id
             appData.projects.remove(at: Self.clickedRow)
             if selectedProjectIndex == Self.clickedRow {
                 selectedProjectIndex = nil
+                appData.selectedProjectID = nil
             } else if let selected = selectedProjectIndex, selected > Self.clickedRow {
                 selectedProjectIndex = selected - 1
+            }
+            // Clear selectedProjectID if the deleted project was the remembered one
+            if appData.selectedProjectID == deletedProjectID {
+                appData.selectedProjectID = nil
             }
             saveData()
             reloadProjects()
