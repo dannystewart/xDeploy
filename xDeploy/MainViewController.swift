@@ -29,33 +29,40 @@ final class DeviceButtonView: NSView {
         super.init(frame: .zero)
 
         wantsLayer = true
-        layer?.cornerRadius = 10
+        layer?.cornerRadius = 8
 
         // Configure icon
-        let config = NSImage.SymbolConfiguration(pointSize: 48, weight: .ultraLight)
+        let config = NSImage.SymbolConfiguration(pointSize: 36, weight: .light)
         iconView.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: title)?
             .withSymbolConfiguration(config)
         iconView.imageScaling = .scaleProportionallyUpOrDown
         iconView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(iconView)
 
         // Configure label
-        label.font = .systemFont(ofSize: 16, weight: .regular)
-        label.alignment = .center
+        label.font = .systemFont(ofSize: 16, weight: .medium)
+        label.alignment = .left
+        label.isBezeled = false
+        label.isBordered = false
+        label.drawsBackground = false
         label.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
 
-        // Center the icon+label group vertically
-        // Icon is 60pt, gap is 8pt, label is ~19pt = ~87pt total
-        // Offset icon center up by half the (gap + label height) to center the group
+        // Use a stack view to group icon and label, then center the stack
+        let contentStack = NSStackView(views: [iconView, label])
+        contentStack.orientation = .horizontal
+        contentStack.spacing = 10
+        contentStack.alignment = .centerY
+        contentStack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentStack)
+
+        // Center the content stack within the button (with slight left offset for visual balance)
         NSLayoutConstraint.activate([
-            iconView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            iconView.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -14),
-            iconView.widthAnchor.constraint(equalToConstant: 60),
-            iconView.heightAnchor.constraint(equalToConstant: 60),
+            iconView.widthAnchor.constraint(equalToConstant: 42),
+            iconView.heightAnchor.constraint(equalToConstant: 42),
 
-            label.centerXAnchor.constraint(equalTo: centerXAnchor),
-            label.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 8),
+            contentStack.centerXAnchor.constraint(equalTo: centerXAnchor, constant: -4),
+            contentStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            contentStack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 16),
+            contentStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -16),
         ])
 
         updateAppearance()
@@ -152,7 +159,7 @@ final class MainViewController: NSViewController {
         case iPad
     }
 
-    private static let projectDragType = NSPasteboard.PasteboardType("com.xdeploy.project-row")
+    private static let projectDragType = NSPasteboard.PasteboardType("com.dannystewart.xDeploy.project-row")
 
     private var appData: AppData = .empty
     private var selectedProjectIndex: Int?
@@ -292,7 +299,7 @@ final class MainViewController: NSViewController {
         // Layout constants
         let padding: CGFloat = 20
         let projectListWidth: CGFloat = 240
-        let buttonGridHeight: CGFloat = 160
+        let buttonGridHeight: CGFloat = 80
 
         NSLayoutConstraint.activate([
             // Project list: fixed width, full height
@@ -314,8 +321,8 @@ final class MainViewController: NSViewController {
             consoleScrollView.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -8),
 
             // Status bar
-            statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
             statusLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -8),
         ])
     }
@@ -362,7 +369,8 @@ final class MainViewController: NSViewController {
         // Device row (iPhone / iPad) - triggers the action
         let deviceRow = NSStackView()
         deviceRow.orientation = .horizontal
-        deviceRow.spacing = 20
+        deviceRow.spacing = 16
+        deviceRow.distribution = .fillEqually
         deviceRow.translatesAutoresizingMaskIntoConstraints = false
 
         iPhoneButton = DeviceButtonView(title: "iPhone", symbolName: "iphone")
@@ -380,17 +388,12 @@ final class MainViewController: NSViewController {
 
         container.addSubview(deviceRow)
 
-        // Button sizes
-        let deviceSize: CGFloat = 160
-
+        // Fill the container edge to edge, buttons fill height
         NSLayoutConstraint.activate([
-            deviceRow.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            deviceRow.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-
-            iPhoneButton.widthAnchor.constraint(equalToConstant: deviceSize),
-            iPhoneButton.heightAnchor.constraint(equalToConstant: deviceSize),
-            iPadButton.widthAnchor.constraint(equalToConstant: deviceSize),
-            iPadButton.heightAnchor.constraint(equalToConstant: deviceSize),
+            deviceRow.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            deviceRow.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            deviceRow.topAnchor.constraint(equalTo: container.topAnchor),
+            deviceRow.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
 
         return container
@@ -450,8 +453,8 @@ final class MainViewController: NSViewController {
             statusLabel.stringValue = appData.projects.isEmpty ? "Add a project to get started" : "Select a project"
         } else {
             let project = appData.projects[selectedProjectIndex!]
-            let action = isRunMode ? "Run" : "Install"
-            statusLabel.stringValue = "\(action) \(project.name) on..."
+            let action = isRunMode ? "run" : "install"
+            statusLabel.stringValue = "Select a device to \(action) \(project.name)"
         }
     }
 
