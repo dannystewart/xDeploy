@@ -144,130 +144,6 @@ final class DeviceButtonView: NSView {
     }
 }
 
-// MARK: - ActionButtonView
-
-/// A text-only button for action selection (Install/Run).
-/// Shows green highlight when selected.
-final class ActionButtonView: NSView {
-    var isSelected: Bool = false {
-        didSet { updateAppearance() }
-    }
-
-    var isEnabled: Bool = true {
-        didSet { updateAppearance() }
-    }
-
-    var onClick: (() -> Void)?
-
-    private let label: NSTextField
-    private var trackingArea: NSTrackingArea?
-
-    private var isHovered = false
-    private var isPressed = false
-
-    init(title: String) {
-        label = NSTextField(labelWithString: title)
-
-        super.init(frame: .zero)
-
-        wantsLayer = true
-        layer?.cornerRadius = 6
-
-        label.font = .systemFont(ofSize: 20, weight: .regular)
-        label.alignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
-
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor),
-        ])
-
-        updateAppearance()
-    }
-
-    @available(*, unavailable)
-    required init?(coder _: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let existing = trackingArea {
-            removeTrackingArea(existing)
-        }
-        trackingArea = NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeInKeyWindow],
-            owner: self,
-            userInfo: nil,
-        )
-        addTrackingArea(trackingArea!)
-    }
-
-    override func mouseEntered(with _: NSEvent) {
-        guard isEnabled else { return }
-        isHovered = true
-        updateAppearance()
-    }
-
-    override func mouseExited(with _: NSEvent) {
-        isHovered = false
-        isPressed = false
-        updateAppearance()
-    }
-
-    override func mouseDown(with _: NSEvent) {
-        guard isEnabled else { return }
-        isPressed = true
-        updateAppearance()
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        guard isEnabled, isPressed else { return }
-        isPressed = false
-
-        let location = convert(event.locationInWindow, from: nil)
-        if bounds.contains(location) {
-            onClick?()
-        }
-
-        updateAppearance()
-    }
-
-    private func updateAppearance() {
-        let backgroundColor: NSColor
-        let textColor: NSColor
-
-        if !isEnabled {
-            backgroundColor = .secondarySystemFill
-            textColor = .disabledControlTextColor
-        } else if isSelected {
-            // Green highlight when selected
-            if isPressed {
-                backgroundColor = NSColor.systemGreen.blended(withFraction: 0.2, of: .black) ?? .systemGreen
-            } else if isHovered {
-                backgroundColor = NSColor.systemGreen.blended(withFraction: 0.1, of: .white) ?? .systemGreen
-            } else {
-                backgroundColor = .systemGreen
-            }
-            textColor = .white
-        } else {
-            if isPressed {
-                backgroundColor = NSColor.gray.withAlphaComponent(0.45)
-            } else if isHovered {
-                backgroundColor = NSColor.gray.withAlphaComponent(0.35)
-            } else {
-                backgroundColor = NSColor.gray.withAlphaComponent(0.25)
-            }
-            textColor = .labelColor
-        }
-
-        layer?.backgroundColor = backgroundColor.cgColor
-        label.textColor = textColor
-    }
-}
-
 // MARK: - MainViewController
 
 final class MainViewController: NSViewController {
@@ -290,8 +166,9 @@ final class MainViewController: NSViewController {
     // Right side buttons
     private var iPhoneButton: DeviceButtonView!
     private var iPadButton: DeviceButtonView!
-    private var installButton: ActionButtonView!
-    private var runButton: ActionButtonView!
+
+    /// Toolbar segmented control for action mode
+    private var actionModeControl: NSSegmentedControl!
 
     // Console output
     private var consoleTextView: NSTextView!
@@ -300,7 +177,7 @@ final class MainViewController: NSViewController {
     private var deployingDevice: DeviceType?
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 660, height: 450))
     }
 
     override func viewDidLoad() {
@@ -400,8 +277,8 @@ final class MainViewController: NSViewController {
 
         // Layout constants
         let padding: CGFloat = 20
-        let projectListWidth: CGFloat = 280
-        let buttonGridHeight: CGFloat = 260 // 160 + 20 + 60 + 20 padding
+        let projectListWidth: CGFloat = 240
+        let buttonGridHeight: CGFloat = 160
 
         NSLayoutConstraint.activate([
             // Project list: fixed width, full height
@@ -468,38 +345,11 @@ final class MainViewController: NSViewController {
     private func createButtonGrid() -> NSView {
         let container = NSView()
 
-        let gridStack = NSStackView()
-        gridStack.orientation = .vertical
-        gridStack.alignment = .centerX
-        gridStack.spacing = 20
-        gridStack.translatesAutoresizingMaskIntoConstraints = false
-
-        // Action row (Install / Run) - on top, selects the mode
-        let actionRow = NSStackView()
-        actionRow.orientation = .horizontal
-        actionRow.spacing = 20
-
-        installButton = ActionButtonView(title: "Install")
-        installButton.onClick = { [weak self] in
-            guard let self else { return }
-            isRunMode = false
-            updateButtonStates()
-        }
-
-        runButton = ActionButtonView(title: "Run")
-        runButton.onClick = { [weak self] in
-            guard let self else { return }
-            isRunMode = true
-            updateButtonStates()
-        }
-
-        actionRow.addArrangedSubview(installButton)
-        actionRow.addArrangedSubview(runButton)
-
-        // Device row (iPhone / iPad) - below, triggers the action
+        // Device row (iPhone / iPad) - triggers the action
         let deviceRow = NSStackView()
         deviceRow.orientation = .horizontal
         deviceRow.spacing = 20
+        deviceRow.translatesAutoresizingMaskIntoConstraints = false
 
         iPhoneButton = DeviceButtonView(title: "iPhone", symbolName: "iphone")
         iPhoneButton.onClick = { [weak self] in
@@ -514,29 +364,19 @@ final class MainViewController: NSViewController {
         deviceRow.addArrangedSubview(iPhoneButton)
         deviceRow.addArrangedSubview(iPadButton)
 
-        // Action row first (top), then device row (bottom)
-        gridStack.addArrangedSubview(actionRow)
-        gridStack.addArrangedSubview(deviceRow)
-
-        container.addSubview(gridStack)
+        container.addSubview(deviceRow)
 
         // Button sizes
         let deviceSize: CGFloat = 160
-        let actionHeight: CGFloat = 60
 
         NSLayoutConstraint.activate([
-            gridStack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            gridStack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            deviceRow.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            deviceRow.centerYAnchor.constraint(equalTo: container.centerYAnchor),
 
             iPhoneButton.widthAnchor.constraint(equalToConstant: deviceSize),
             iPhoneButton.heightAnchor.constraint(equalToConstant: deviceSize),
             iPadButton.widthAnchor.constraint(equalToConstant: deviceSize),
             iPadButton.heightAnchor.constraint(equalToConstant: deviceSize),
-
-            installButton.widthAnchor.constraint(equalToConstant: deviceSize),
-            installButton.heightAnchor.constraint(equalToConstant: actionHeight),
-            runButton.widthAnchor.constraint(equalToConstant: deviceSize),
-            runButton.heightAnchor.constraint(equalToConstant: actionHeight),
         ])
 
         return container
@@ -580,9 +420,8 @@ final class MainViewController: NSViewController {
     private func updateButtonStates() {
         let hasSelection = selectedProjectIndex != nil && selectedProjectIndex! < appData.projects.count
 
-        // Action buttons are always enabled (for mode selection)
-        installButton.isSelected = !isRunMode
-        runButton.isSelected = isRunMode
+        // Update toolbar segmented control
+        actionModeControl?.selectedSegment = isRunMode ? 0 : 1
 
         // Device buttons enabled only when a project is selected
         iPhoneButton.isEnabled = hasSelection
@@ -956,10 +795,14 @@ extension MainViewController: NSMenuDelegate {
 extension MainViewController: NSToolbarDelegate {
     private static let addProjectIdentifier = NSToolbarItem.Identifier("addProject")
     private static let settingsIdentifier = NSToolbarItem.Identifier("settings")
+    private static let actionModeIdentifier = NSToolbarItem.Identifier("actionMode")
 
     func toolbarDefaultItemIdentifiers(_: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
             Self.addProjectIdentifier,
+            .flexibleSpace,
+            Self.actionModeIdentifier,
+            .flexibleSpace,
             Self.settingsIdentifier,
         ]
     }
@@ -996,8 +839,26 @@ extension MainViewController: NSToolbarDelegate {
             item.isNavigational = true
             return item
 
+        case Self.actionModeIdentifier:
+            let segmentedControl = NSSegmentedControl(labels: ["Run Now", "Install Only"], trackingMode: .selectOne, target: self, action: #selector(actionModeChanged(_:)))
+            segmentedControl.selectedSegment = isRunMode ? 0 : 1
+            segmentedControl.segmentStyle = .automatic
+            actionModeControl = segmentedControl
+
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.label = "Action"
+            item.paletteLabel = "Action Mode"
+            item.toolTip = "Choose whether to run the app or just install it"
+            item.view = segmentedControl
+            return item
+
         default:
             return nil
         }
+    }
+
+    @objc private func actionModeChanged(_ sender: NSSegmentedControl) {
+        isRunMode = sender.selectedSegment == 0
+        updateButtonStates()
     }
 }
