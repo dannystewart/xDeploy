@@ -170,6 +170,10 @@ final class MainViewController: NSViewController {
     /// Toolbar segmented control for action mode
     private var actionModeControl: NSSegmentedControl!
 
+    /// Toolbar button for always-on-top toggle
+    private var alwaysOnTopButton: NSToolbarItem?
+    private var isAlwaysOnTop = false
+
     // Console output
     private var consoleTextView: NSTextView!
     private var consoleScrollView: NSScrollView!
@@ -796,11 +800,13 @@ extension MainViewController: NSToolbarDelegate {
     private static let addProjectIdentifier = NSToolbarItem.Identifier("addProject")
     private static let settingsIdentifier = NSToolbarItem.Identifier("settings")
     private static let actionModeIdentifier = NSToolbarItem.Identifier("actionMode")
+    private static let alwaysOnTopIdentifier = NSToolbarItem.Identifier("alwaysOnTop")
 
     func toolbarDefaultItemIdentifiers(_: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
             Self.addProjectIdentifier,
             .flexibleSpace,
+            Self.alwaysOnTopIdentifier,
             Self.actionModeIdentifier,
             .flexibleSpace,
             Self.settingsIdentifier,
@@ -852,6 +858,17 @@ extension MainViewController: NSToolbarDelegate {
             item.view = segmentedControl
             return item
 
+        case Self.alwaysOnTopIdentifier:
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.label = "Pin"
+            item.paletteLabel = "Always on Top"
+            item.toolTip = "Keep window above other windows"
+            item.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: "Always on Top")
+            item.target = self
+            item.action = #selector(toggleAlwaysOnTop)
+            alwaysOnTopButton = item
+            return item
+
         default:
             return nil
         }
@@ -860,5 +877,17 @@ extension MainViewController: NSToolbarDelegate {
     @objc private func actionModeChanged(_ sender: NSSegmentedControl) {
         isRunMode = sender.selectedSegment == 0
         updateButtonStates()
+    }
+
+    @objc private func toggleAlwaysOnTop() {
+        isAlwaysOnTop.toggle()
+
+        if isAlwaysOnTop {
+            view.window?.level = .floating
+            alwaysOnTopButton?.image = NSImage(systemSymbolName: "macwindow.badge.plus", accessibilityDescription: "Always on Top (Active)")
+        } else {
+            view.window?.level = .normal
+            alwaysOnTopButton?.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: "Always on Top")
+        }
     }
 }
