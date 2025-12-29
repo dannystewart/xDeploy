@@ -28,9 +28,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // App menu
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About xDeploy", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+
+        let aboutItem = NSMenuItem(title: "About xDeploy", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        aboutItem.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
+        appMenu.addItem(aboutItem)
+
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Settings…", action: #selector(MainViewController.showSettings), keyEquivalent: ",")
+
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(MainViewController.showSettings), keyEquivalent: ",")
+        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
+        appMenu.addItem(settingsItem)
+
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Hide xDeploy", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         let hideOthersItem = NSMenuItem(title: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
@@ -45,13 +53,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Edit menu (for copy/paste/select all)
         let editMenuItem = NSMenuItem()
         let editMenu = NSMenu(title: "Edit")
-        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+
+        let undoItem = NSMenuItem(title: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        undoItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
+        editMenu.addItem(undoItem)
+
+        let redoItem = NSMenuItem(title: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        redoItem.image = NSImage(systemSymbolName: "arrow.uturn.forward", accessibilityDescription: nil)
+        editMenu.addItem(redoItem)
+
         editMenu.addItem(.separator())
-        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+
+        let cutItem = NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        cutItem.image = NSImage(systemSymbolName: "scissors", accessibilityDescription: nil)
+        editMenu.addItem(cutItem)
+
+        let copyItem = NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        copyItem.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
+        editMenu.addItem(copyItem)
+
+        let pasteItem = NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        pasteItem.image = NSImage(systemSymbolName: "clipboard", accessibilityDescription: nil)
+        editMenu.addItem(pasteItem)
+
+        let selectAllItem = NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        selectAllItem.image = NSImage(systemSymbolName: "selection.pin.in.out", accessibilityDescription: nil)
+        editMenu.addItem(selectAllItem)
+
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)
 
@@ -60,10 +88,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let windowMenu = NSMenu(title: "Window")
         windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m")
         windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.zoom(_:)), keyEquivalent: "")
+        windowMenu.addItem(.separator())
+        let alwaysOnTopItem = NSMenuItem(title: "Always on Top", action: #selector(MainViewController.toggleAlwaysOnTop), keyEquivalent: "t")
+        alwaysOnTopItem.image = NSImage(systemSymbolName: "macwindow.on.rectangle", accessibilityDescription: nil)
+        windowMenu.addItem(alwaysOnTopItem)
         windowMenuItem.submenu = windowMenu
         mainMenu.addItem(windowMenuItem)
 
         NSApp.mainMenu = mainMenu
+
+        // Add Project menu with keyboard shortcuts
+        self.addProjectMenu(to: mainMenu)
+    }
+
+    private func addProjectMenu(to mainMenu: NSMenu) {
+        let projectMenuItem = NSMenuItem()
+        let projectMenu = NSMenu(title: "Project")
+
+        let newProjectItem = NSMenuItem(title: "New Project", action: #selector(MainViewController.addProject), keyEquivalent: "n")
+        newProjectItem.image = NSImage(systemSymbolName: "plus", accessibilityDescription: nil)
+        projectMenu.addItem(newProjectItem)
+
+        projectMenu.addItem(.separator())
+
+        let installItem = NSMenuItem(title: "Install Only", action: #selector(MainViewController.switchToInstallMode), keyEquivalent: "i")
+        installItem.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: nil)
+        projectMenu.addItem(installItem)
+
+        let runItem = NSMenuItem(title: "Run Now", action: #selector(MainViewController.switchToRunMode), keyEquivalent: "r")
+        runItem.image = NSImage(systemSymbolName: "play.fill", accessibilityDescription: nil)
+        projectMenu.addItem(runItem)
+
+        projectMenu.addItem(.separator())
+
+        let iPhoneItem = NSMenuItem(title: "Deploy to iPhone", action: #selector(MainViewController.performActionForPhone), keyEquivalent: "i")
+        iPhoneItem.keyEquivalentModifierMask = [.command, .shift]
+        iPhoneItem.image = NSImage(systemSymbolName: "iphone", accessibilityDescription: nil)
+        projectMenu.addItem(iPhoneItem)
+
+        let iPadItem = NSMenuItem(title: "Deploy to iPad", action: #selector(MainViewController.performActionForPad), keyEquivalent: "p")
+        iPadItem.keyEquivalentModifierMask = [.command, .shift]
+        iPadItem.image = NSImage(systemSymbolName: "ipad.landscape", accessibilityDescription: nil)
+        projectMenu.addItem(iPadItem)
+
+        projectMenu.addItem(.separator())
+
+        let customDeviceItem = NSMenuItem(title: "Custom Device…", action: #selector(MainViewController.showCustomDeviceSheet), keyEquivalent: "d")
+        customDeviceItem.keyEquivalentModifierMask = [.command, .shift]
+        customDeviceItem.image = NSImage(systemSymbolName: "ipad.and.iphone", accessibilityDescription: nil)
+        projectMenu.addItem(customDeviceItem)
+
+        projectMenuItem.submenu = projectMenu
+        mainMenu.insertItem(projectMenuItem, at: 1)
     }
 
     private func setupMainWindow() {

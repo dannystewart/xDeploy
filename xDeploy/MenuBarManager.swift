@@ -38,6 +38,7 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
                 )
                 item.target = self
                 item.representedObject = project
+                item.image = NSImage(systemSymbolName: "play.fill", accessibilityDescription: nil)
                 menu.addItem(item)
 
                 // Add divider after the first (most recent) project
@@ -58,6 +59,7 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
         )
         iPhoneItem.target = self
         iPhoneItem.state = self.selectedDevice == .iPhone ? .on : .off
+        iPhoneItem.image = NSImage(systemSymbolName: "iphone", accessibilityDescription: nil)
         menu.addItem(iPhoneItem)
 
         let iPadItem = NSMenuItem(
@@ -67,6 +69,7 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
         )
         iPadItem.target = self
         iPadItem.state = self.selectedDevice == .iPad ? .on : .off
+        iPadItem.image = NSImage(systemSymbolName: "ipad.landscape", accessibilityDescription: nil)
         menu.addItem(iPadItem)
     }
 

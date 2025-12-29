@@ -67,6 +67,34 @@ final class MainViewController: NSViewController {
         }
     }
 
+    // MARK: - Keyboard Shortcuts
+
+    @objc func switchToInstallMode() {
+        self.isRunMode = false
+        self.actionModeControl?.selectedSegment = 1
+        self.updateButtonStates()
+    }
+
+    @objc func switchToRunMode() {
+        self.isRunMode = true
+        self.actionModeControl?.selectedSegment = 0
+        self.updateButtonStates()
+    }
+
+    @objc func performActionForPhone() {
+        guard self.selectedProjectIndex != nil else { return }
+        self.performDeploymentToDevice(.iPhone)
+    }
+
+    @objc func performActionForPad() {
+        guard self.selectedProjectIndex != nil else { return }
+        self.performDeploymentToDevice(.iPad)
+    }
+
+    @objc func showCustomDeviceSheet() {
+        self.showCustomDeviceDialog()
+    }
+
     @objc func addProject() {
         self.showProjectEditor(project: nil)
     }
@@ -195,8 +223,15 @@ final class MainViewController: NSViewController {
         // Context menu for rows
         let menu = NSMenu()
         menu.delegate = self
-        menu.addItem(NSMenuItem(title: "Edit", action: #selector(editClickedProject), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Delete", action: #selector(deleteClickedProject), keyEquivalent: ""))
+
+        let editItem = NSMenuItem(title: "Edit", action: #selector(editClickedProject), keyEquivalent: "")
+        editItem.image = NSImage(systemSymbolName: "pencil", accessibilityDescription: nil)
+        menu.addItem(editItem)
+
+        let deleteItem = NSMenuItem(title: "Delete", action: #selector(deleteClickedProject), keyEquivalent: "")
+        deleteItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
+        menu.addItem(deleteItem)
+
         self.projectTableView.menu = menu
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("ProjectColumn"))
@@ -838,7 +873,7 @@ extension MainViewController: NSToolbarDelegate {
         self.updateButtonStates()
     }
 
-    @objc private func toggleAlwaysOnTop() {
+    @objc func toggleAlwaysOnTop() {
         self.isAlwaysOnTop.toggle()
 
         if self.isAlwaysOnTop {
