@@ -117,7 +117,7 @@ final class MainViewController: NSViewController {
         self.consoleTextView.textStorage?.append(NSAttributedString(
             string: text,
             attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+                .font: NSFont.monospacedSystemFont(ofSize: 10, weight: .regular),
                 .foregroundColor: NSColor.textColor,
             ],
         ))
@@ -287,7 +287,7 @@ final class MainViewController: NSViewController {
         self.consoleTextView = NSTextView()
         self.consoleTextView.isEditable = false
         self.consoleTextView.isSelectable = true
-        self.consoleTextView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        self.consoleTextView.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
         self.consoleTextView.backgroundColor = NSColor.textBackgroundColor
         self.consoleTextView.textColor = .textColor
         self.consoleTextView.autoresizingMask = [.width]
