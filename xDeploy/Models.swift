@@ -54,11 +54,14 @@ struct DeviceConfig: Codable {
 // MARK: - AppData
 
 struct AppData: Codable {
-    static let empty: AppData = .init(projects: [], deviceConfig: .default, selectedProjectID: nil)
+    static let empty: AppData = .init(projects: [], deviceConfig: .default, selectedProjectID: nil, customDeviceName: nil)
 
     var projects: [Project]
     var deviceConfig: DeviceConfig
 
     /// The ID of the most recently selected project, restored on launch.
     var selectedProjectID: UUID?
+
+    /// The last used custom device name, restored on launch.
+    var customDeviceName: String?
 }

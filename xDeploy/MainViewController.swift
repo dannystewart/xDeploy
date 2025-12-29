@@ -388,6 +388,75 @@ final class MainViewController: NSViewController {
         }
     }
 
+    private func performDeploymentToCustomDevice(deviceName: String) {
+        guard let index = selectedProjectIndex, index < appData.projects.count else { return }
+        let project = self.appData.projects[index]
+
+        self.deployingDevice = nil // Custom device doesn't use the DeviceType enum
+        self.setUIEnabled(false)
+        self.clearConsole()
+
+        Task {
+            do {
+                if self.isRunMode {
+                    try await DeploymentManager.shared.deployRun(
+                        project: project,
+                        deviceName: deviceName,
+                        statusHandler: { [weak self] status in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.statusLabel.stringValue = status
+                            }
+                        },
+                        outputHandler: { [weak self] output in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.appendToConsole(output)
+                            }
+                        },
+                    )
+                } else {
+                    try await DeploymentManager.shared.deployInstall(
+                        project: project,
+                        deviceName: deviceName,
+                        statusHandler: { [weak self] status in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.statusLabel.stringValue = status
+                            }
+                        },
+                        outputHandler: { [weak self] output in
+                            guard let self else { return }
+                            Task { @MainActor in
+                                self.appendToConsole(output)
+                            }
+                        },
+                    )
+                }
+
+                await MainActor.run {
+                    let action = self.isRunMode ? "running" : "installed"
+                    self.statusLabel.stringValue = "✓ \(project.name) \(action) on \(deviceName)"
+                    self.deployingDevice = nil
+                    self.setUIEnabled(true)
+                }
+            } catch {
+                await MainActor.run {
+                    self.appendToConsole("\n✗ Error: \(error.localizedDescription)\n")
+                    self.statusLabel.stringValue = "✗ Error: \(error.localizedDescription)"
+                    self.deployingDevice = nil
+                    self.setUIEnabled(true)
+
+                    let alert = NSAlert()
+                    alert.messageText = "Deployment Failed"
+                    alert.informativeText = error.localizedDescription
+                    alert.alertStyle = .critical
+                    alert.runModal()
+                }
+            }
+        }
+    }
+
     private func setUIEnabled(_ enabled: Bool) {
         self.iPhoneButton.isEnabled = enabled
         self.iPadButton.isEnabled = enabled
@@ -679,12 +748,14 @@ extension MainViewController: NSToolbarDelegate {
     private static let settingsIdentifier = NSToolbarItem.Identifier("settings")
     private static let actionModeIdentifier = NSToolbarItem.Identifier("actionMode")
     private static let alwaysOnTopIdentifier = NSToolbarItem.Identifier("alwaysOnTop")
+    private static let customDeviceIdentifier = NSToolbarItem.Identifier("customDevice")
 
     func toolbarDefaultItemIdentifiers(_: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
             Self.addProjectIdentifier,
             .flexibleSpace,
             Self.actionModeIdentifier,
+            Self.customDeviceIdentifier,
             Self.alwaysOnTopIdentifier,
             .flexibleSpace,
             Self.settingsIdentifier,
@@ -747,6 +818,16 @@ extension MainViewController: NSToolbarDelegate {
             self.alwaysOnTopButton = item
             return item
 
+        case Self.customDeviceIdentifier:
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.label = "Custom Device"
+            item.paletteLabel = "Custom Device"
+            item.toolTip = "Deploy to a custom device"
+            item.image = NSImage(systemSymbolName: "ipad.landscape.and.iphone", accessibilityDescription: "Custom Device")
+            item.target = self
+            item.action = #selector(self.showCustomDeviceDialog)
+            return item
+
         default:
             return nil
         }
@@ -767,5 +848,25 @@ extension MainViewController: NSToolbarDelegate {
             view.window?.level = .normal
             self.alwaysOnTopButton?.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: "Always on Top")
         }
+    }
+
+    @objc private func showCustomDeviceDialog() {
+        guard self.selectedProjectIndex != nil else { return }
+
+        let editor = CustomDeviceViewController(
+            customDeviceName: self.appData.customDeviceName,
+            isRunMode: self.isRunMode,
+        ) { [weak self] deviceName in
+            guard let self else { return }
+
+            // Save the custom device name
+            self.appData.customDeviceName = deviceName
+            self.saveData()
+
+            // Perform deployment with custom device
+            self.performDeploymentToCustomDevice(deviceName: deviceName)
+        }
+
+        presentAsSheet(editor)
     }
 }
