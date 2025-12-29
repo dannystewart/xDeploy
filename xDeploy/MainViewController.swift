@@ -733,10 +733,12 @@ extension MainViewController: NSMenuDelegate {
         let tablePoint = self.projectTableView.convert(windowPoint, from: nil)
         Self.clickedRow = self.projectTableView.row(at: tablePoint)
 
-        // Enable/disable menu items based on clicked row
-        let hasClickedRow = Self.clickedRow >= 0
+        // Only enable menu items if clicking on a valid row
+        let hasClickedRow = Self.clickedRow >= 0 && Self.clickedRow < self.appData.projects.count
         for item in menu.items {
             item.isEnabled = hasClickedRow
+            // Make items hidden when clicking on blank rows to prevent empty menu
+            item.isHidden = !hasClickedRow
         }
     }
 
