@@ -1,4 +1,5 @@
 import AppKit
+import PolyKit
 
 // MARK: - MainViewController
 
@@ -128,7 +129,8 @@ final class MainViewController: NSViewController {
     /// Parses ANSI color codes and returns an attributed string with colors applied.
     private func parseANSIColors(_ text: String) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        let baseFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .light)
+        let baseFont = PolyFont.jetBrainsMono.font(size: 10, weight: .light)
+        let boldFont = PolyFont.jetBrainsMono.font(size: 10, weight: .medium)
         var currentColor = NSColor.textColor
         var currentBold = false
 
@@ -151,7 +153,7 @@ final class MainViewController: NSViewController {
             if let range = Range(match.range, in: text) {
                 let beforeText = String(text[lastIndex ..< range.lowerBound])
                 if !beforeText.isEmpty {
-                    let font = currentBold ? NSFont.monospacedSystemFont(ofSize: 10, weight: .regular) : baseFont
+                    let font = currentBold ? boldFont : baseFont
                     result.append(NSAttributedString(string: beforeText, attributes: [
                         .font: font,
                         .foregroundColor: currentColor,
@@ -218,7 +220,7 @@ final class MainViewController: NSViewController {
         // Add any remaining text after the last escape code
         let remainingText = String(text[lastIndex...])
         if !remainingText.isEmpty {
-            let font = currentBold ? NSFont.monospacedSystemFont(ofSize: 10, weight: .bold) : baseFont
+            let font = currentBold ? boldFont : baseFont
             result.append(NSAttributedString(string: remainingText, attributes: [
                 .font: font,
                 .foregroundColor: currentColor,
@@ -387,7 +389,7 @@ final class MainViewController: NSViewController {
         self.consoleTextView = NSTextView()
         self.consoleTextView.isEditable = false
         self.consoleTextView.isSelectable = true
-        self.consoleTextView.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        self.consoleTextView.font = PolyFont.jetBrainsMono.font(size: 10)
         self.consoleTextView.backgroundColor = NSColor.textBackgroundColor
         self.consoleTextView.textColor = .textColor
         self.consoleTextView.autoresizingMask = [.width]
