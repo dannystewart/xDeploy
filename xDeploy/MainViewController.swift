@@ -684,8 +684,8 @@ extension MainViewController: NSToolbarDelegate {
         [
             Self.addProjectIdentifier,
             .flexibleSpace,
-            Self.alwaysOnTopIdentifier,
             Self.actionModeIdentifier,
+            Self.alwaysOnTopIdentifier,
             .flexibleSpace,
             Self.settingsIdentifier,
         ]
