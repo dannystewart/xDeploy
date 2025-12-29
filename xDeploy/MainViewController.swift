@@ -114,18 +114,118 @@ final class MainViewController: NSViewController {
 
     func appendToConsole(_ text: String) {
         guard isViewLoaded else { return }
-        self.consoleTextView.textStorage?.append(NSAttributedString(
-            string: text,
-            attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 10, weight: .regular),
-                .foregroundColor: NSColor.textColor,
-            ],
-        ))
+
+        // Parse ANSI color codes and create attributed string
+        let attributedString = self.parseANSIColors(text)
+        self.consoleTextView.textStorage?.append(attributedString)
 
         // Auto-scroll to bottom only if window is visible
         if view.window?.isVisible == true {
             self.consoleTextView.scrollToEndOfDocument(nil)
         }
+    }
+
+    /// Parses ANSI color codes and returns an attributed string with colors applied.
+    private func parseANSIColors(_ text: String) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        let baseFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .light)
+        var currentColor = NSColor.textColor
+        var currentBold = false
+
+        // ANSI escape pattern: ESC[...m
+        // Use "\u{001B}" outside of raw string to get actual ESC character
+        let pattern = "\u{001B}\\[([0-9;]+)m"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            // Fallback if regex fails
+            return NSAttributedString(string: text, attributes: [
+                .font: baseFont,
+                .foregroundColor: NSColor.textColor,
+            ])
+        }
+
+        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        var lastIndex = text.startIndex
+
+        for match in matches {
+            // Add text before this escape code
+            if let range = Range(match.range, in: text) {
+                let beforeText = String(text[lastIndex ..< range.lowerBound])
+                if !beforeText.isEmpty {
+                    let font = currentBold ? NSFont.monospacedSystemFont(ofSize: 10, weight: .regular) : baseFont
+                    result.append(NSAttributedString(string: beforeText, attributes: [
+                        .font: font,
+                        .foregroundColor: currentColor,
+                    ]))
+                }
+
+                // Parse the ANSI code
+                if let codeRange = Range(match.range(at: 1), in: text) {
+                    let codes = text[codeRange].split(separator: ";").compactMap { Int($0) }
+
+                    for code in codes {
+                        switch code {
+                        case 0: // Reset
+                            currentColor = .textColor
+                            currentBold = false
+
+                        case 1: // Bold
+                            currentBold = true
+
+                        case 22: // Normal intensity
+                            currentBold = false
+
+                        case 30: currentColor = .black
+
+                        case 31: currentColor = .systemRed
+
+                        case 32: currentColor = .systemGreen
+
+                        case 33: currentColor = .systemYellow
+
+                        case 34: currentColor = .systemBlue
+
+                        case 35: currentColor = .systemPurple
+
+                        case 36: currentColor = .systemCyan
+
+                        case 37: currentColor = .textColor
+
+                        case 90: currentColor = .systemGray
+
+                        case 91: currentColor = .systemRed
+
+                        case 92: currentColor = .systemGreen
+
+                        case 93: currentColor = .systemYellow
+
+                        case 94: currentColor = .systemBlue
+
+                        case 95: currentColor = .systemPurple
+
+                        case 96: currentColor = .systemCyan
+
+                        case 97: currentColor = .white
+
+                        default: break
+                        }
+                    }
+                }
+
+                lastIndex = range.upperBound
+            }
+        }
+
+        // Add any remaining text after the last escape code
+        let remainingText = String(text[lastIndex...])
+        if !remainingText.isEmpty {
+            let font = currentBold ? NSFont.monospacedSystemFont(ofSize: 10, weight: .bold) : baseFont
+            result.append(NSAttributedString(string: remainingText, attributes: [
+                .font: font,
+                .foregroundColor: currentColor,
+            ]))
+        }
+
+        return result
     }
 
     // MARK: - Data

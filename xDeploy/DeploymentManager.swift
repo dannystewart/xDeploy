@@ -24,7 +24,7 @@ final class DeploymentManager: @unchecked Sendable {
             "platform=iOS,name=\(deviceName)",
         ]
 
-        try await self.runCommand("/usr/bin/xcodebuild", arguments: args, outputHandler: outputHandler)
+        try await self.runCommandWithBeautifier("/usr/bin/xcodebuild", arguments: args, outputHandler: outputHandler)
     }
 
     /// Installs the app on the specified device.
@@ -106,6 +106,94 @@ final class DeploymentManager: @unchecked Sendable {
 
         statusHandler("✓ Running \(project.name) on \(deviceName)")
         outputHandler("\n✓ Launch complete\n")
+    }
+
+    /// Runs a shell command asynchronously with streaming output through xcbeautify.
+    private func runCommandWithBeautifier(
+        _ command: String,
+        arguments: [String],
+        outputHandler: @escaping @Sendable (String) -> Void,
+    ) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            DispatchQueue.global(qos: .userInitiated).async {
+                // Set up xcodebuild process
+                let xcodebuildProcess = Process()
+                xcodebuildProcess.executableURL = URL(fileURLWithPath: command)
+                xcodebuildProcess.arguments = arguments
+
+                // Set up xcbeautify process
+                let beautifyProcess = Process()
+                beautifyProcess.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/xcbeautify")
+
+                // Enable color output - xcbeautify respects these environment variables
+                var environment = ProcessInfo.processInfo.environment
+                environment["CLICOLOR_FORCE"] = "1"
+                environment["TERM"] = "xterm-256color"
+                beautifyProcess.environment = environment
+
+                // Pipe xcodebuild output to xcbeautify
+                let pipe = Pipe()
+                xcodebuildProcess.standardOutput = pipe
+                xcodebuildProcess.standardError = pipe
+                beautifyProcess.standardInput = pipe
+
+                // Capture beautified output
+                let outputPipe = Pipe()
+                beautifyProcess.standardOutput = outputPipe
+                beautifyProcess.standardError = outputPipe
+
+                var outputBuffer = Data()
+
+                // Stream beautified output
+                outputPipe.fileHandleForReading.readabilityHandler = { handle in
+                    let data = handle.availableData
+                    guard !data.isEmpty else { return }
+                    outputBuffer.append(data)
+
+                    // Process complete lines
+                    while let newlineRange = outputBuffer.range(of: Data([0x0A])) {
+                        let lineData = outputBuffer.subdata(in: 0 ..< newlineRange.upperBound)
+                        outputBuffer.removeSubrange(0 ..< newlineRange.upperBound)
+                        if let line = String(data: lineData, encoding: .utf8) {
+                            outputHandler(line)
+                        }
+                    }
+                }
+
+                do {
+                    try beautifyProcess.run()
+                    try xcodebuildProcess.run()
+                } catch {
+                    outputPipe.fileHandleForReading.readabilityHandler = nil
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                xcodebuildProcess.waitUntilExit()
+
+                // Close the pipe to signal EOF to xcbeautify
+                try? pipe.fileHandleForWriting.close()
+
+                beautifyProcess.waitUntilExit()
+
+                // Clean up handlers
+                outputPipe.fileHandleForReading.readabilityHandler = nil
+
+                // Flush any remaining buffered content
+                if !outputBuffer.isEmpty, let remaining = String(data: outputBuffer, encoding: .utf8) {
+                    outputHandler(remaining)
+                }
+
+                if xcodebuildProcess.terminationStatus != 0 {
+                    continuation.resume(throwing: DeploymentError.commandFailed(
+                        command: "\(command) \(arguments.joined(separator: " "))",
+                        exitCode: xcodebuildProcess.terminationStatus,
+                    ))
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
     }
 
     /// Runs a shell command asynchronously with streaming output.
