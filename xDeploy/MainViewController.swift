@@ -126,6 +126,21 @@ final class MainViewController: NSViewController {
         }
     }
 
+    @objc func editSelectedProject() {
+        // Only edit if double-clicked on an actual row
+        let clickedRow = self.projectTableView.clickedRow
+        guard clickedRow >= 0, clickedRow < self.appData.projects.count else { return }
+        let project = self.appData.projects[clickedRow]
+        self.showProjectEditor(project: project)
+    }
+
+    @objc func editCurrentlySelectedProject() {
+        // Edit the currently selected project (for keyboard shortcut)
+        guard let index = selectedProjectIndex, index < appData.projects.count else { return }
+        let project = self.appData.projects[index]
+        self.showProjectEditor(project: project)
+    }
+
     /// Parses ANSI color codes and returns an attributed string with colors applied.
     private func parseANSIColors(_ text: String) -> NSAttributedString {
         let result = NSMutableAttributedString()
@@ -600,14 +615,6 @@ final class MainViewController: NSViewController {
         // Action buttons always stay enabled for mode switching
         self.projectTableView.isEnabled = enabled
         self.updateButtonStates()
-    }
-
-    @objc private func editSelectedProject() {
-        // Only edit if double-clicked on an actual row
-        let clickedRow = self.projectTableView.clickedRow
-        guard clickedRow >= 0, clickedRow < self.appData.projects.count else { return }
-        let project = self.appData.projects[clickedRow]
-        self.showProjectEditor(project: project)
     }
 
     @objc private func removeSelectedProject() {

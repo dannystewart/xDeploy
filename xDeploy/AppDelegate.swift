@@ -109,6 +109,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newProjectItem.image = NSImage(systemSymbolName: "plus", accessibilityDescription: nil)
         projectMenu.addItem(newProjectItem)
 
+        let editProjectItem = NSMenuItem(title: "Edit Project", action: #selector(MainViewController.editCurrentlySelectedProject), keyEquivalent: "e")
+        editProjectItem.image = NSImage(systemSymbolName: "pencil", accessibilityDescription: nil)
+        projectMenu.addItem(editProjectItem)
+
         projectMenu.addItem(.separator())
 
         let installItem = NSMenuItem(title: "Install Only", action: #selector(MainViewController.switchToInstallMode), keyEquivalent: "i")
