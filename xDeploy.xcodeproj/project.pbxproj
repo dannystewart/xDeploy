@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		30D19A262F031F820045EDE8 /* PolyKit in Frameworks */ = {isa = PBXBuildFile; productRef = 30D19A252F031F820045EDE8 /* PolyKit */; };
 		30D1DDC62EE33E0C00943464 /* xDeployIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 30D1DDC52EE33E0C00943464 /* xDeployIcon.icon */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				30D19A262F031F820045EDE8 /* PolyKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			);
 			name = xDeploy;
 			packageProductDependencies = (
+				30D19A252F031F820045EDE8 /* PolyKit */,
 			);
 			productName = xDeploy;
 			productReference = 30D1DDB72EE33CB200943464 /* xDeploy.app */;
@@ -100,6 +103,9 @@
 			);
 			mainGroup = 30D1DDAE2EE33CB200943464;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				30D19A242F031F820045EDE8 /* XCLocalSwiftPackageReference "../polykit-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 30D1DDB82EE33CB200943464 /* Products */;
 			projectDirPath = "";
@@ -358,6 +364,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		30D19A242F031F820045EDE8 /* XCLocalSwiftPackageReference "../polykit-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../polykit-swift";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		30D19A252F031F820045EDE8 /* PolyKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PolyKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 30D1DDAF2EE33CB200943464 /* Project object */;
 }
