@@ -9,14 +9,19 @@ struct Project: Codable, Identifiable, Equatable {
     var scheme: String
     var bundleID: String
 
-    /// The derived data path for this project's build products.
-    /// Example: ~/Library/Developer/Xcode/DerivedData/PrismApp-eifcozscykfhnudgtuedxokctbvf
-    var derivedDataPath: String
-
-    /// Computed path to the .app bundle in the derived data.
+    /// Computed path to the .app bundle in the Build folder.
+    /// The Build folder is expected to be in the same directory as the .xcodeproj file.
+    /// Example: ~/Developer/PrismApp/Build/Products/Debug-iphoneos/Prism.app
     var appBundlePath: String {
-        let appName = scheme // Usually the scheme name matches the app name
-        return "\(derivedDataPath)/Build/Products/Debug-iphoneos/\(appName).app"
+        let projectURL = URL(fileURLWithPath: (projectPath as NSString).expandingTildeInPath)
+        let projectDirectory = projectURL.deletingLastPathComponent()
+        let appName = self.scheme // Usually the scheme name matches the app name
+        return projectDirectory
+            .appendingPathComponent("Build")
+            .appendingPathComponent("Products")
+            .appendingPathComponent("Debug-iphoneos")
+            .appendingPathComponent("\(appName).app")
+            .path
     }
 
     init(
@@ -25,14 +30,12 @@ struct Project: Codable, Identifiable, Equatable {
         projectPath: String,
         scheme: String,
         bundleID: String,
-        derivedDataPath: String,
     ) {
         self.id = id
         self.name = name
         self.projectPath = projectPath
         self.scheme = scheme
         self.bundleID = bundleID
-        self.derivedDataPath = derivedDataPath
     }
 }
 

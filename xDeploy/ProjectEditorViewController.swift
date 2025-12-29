@@ -11,7 +11,6 @@ final class ProjectEditorViewController: NSViewController {
     private let projectPathField: NSTextField = .init()
     private let schemeField: NSTextField = .init()
     private let bundleIDField: NSTextField = .init()
-    private let derivedDataField: NSTextField = .init()
 
     // MARK: - Init
 
@@ -67,14 +66,6 @@ final class ProjectEditorViewController: NSViewController {
                 label: "Bundle ID:",
                 field: self.bundleIDField,
                 placeholder: "com.example.MyApp",
-            ),
-        )
-        stackView.addArrangedSubview(
-            createFormRow(
-                label: "Derived Data:",
-                field: derivedDataField,
-                placeholder: "~/Library/Developer/Xcode/DerivedData/MyApp-abc123",
-                withBrowse: true,
             ),
         )
 
@@ -135,8 +126,7 @@ final class ProjectEditorViewController: NSViewController {
         row.addArrangedSubview(field)
 
         if withBrowse {
-            let browseButton = NSButton(title: "Browse...", target: self, action: #selector(browseForPath(_:)))
-            browseButton.tag = field == projectPathField ? 0 : 1
+            let browseButton = NSButton(title: "Browse...", target: self, action: #selector(browseForPath))
             row.addArrangedSubview(browseButton)
         }
 
@@ -151,39 +141,30 @@ final class ProjectEditorViewController: NSViewController {
     private func populateFields() {
         guard let project else { return }
 
-        nameField.stringValue = project.name
-        projectPathField.stringValue = project.projectPath
-        schemeField.stringValue = project.scheme
-        bundleIDField.stringValue = project.bundleID
-        derivedDataField.stringValue = project.derivedDataPath
+        self.nameField.stringValue = project.name
+        self.projectPathField.stringValue = project.projectPath
+        self.schemeField.stringValue = project.scheme
+        self.bundleIDField.stringValue = project.bundleID
     }
 
-    @objc private func browseForPath(_ sender: NSButton) {
+    @objc private func browseForPath() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
 
-        if sender.tag == 0 {
-            // .xcodeproj is a package (directory bundle). With treatsFilePackagesAsDirectories = false,
-            // packages appear as opaque items (like files) in the browser, so we need canChooseFiles = true.
-            panel.canChooseFiles = true
-            panel.canChooseDirectories = false
-            panel.treatsFilePackagesAsDirectories = false
-            // Use the system-defined UTType for Xcode projects
-            if let xcodeprojType = UTType("com.apple.xcode.project") {
-                panel.allowedContentTypes = [xcodeprojType]
-            }
-            panel.message = "Select the .xcodeproj project"
-            panel.directoryURL = URL(fileURLWithPath: NSString("~/Developer").expandingTildeInPath)
-        } else {
-            panel.canChooseFiles = false
-            panel.canChooseDirectories = true
-            panel.message = "Select the DerivedData folder for this project"
-            panel.directoryURL = URL(fileURLWithPath: NSString("~/Library/Developer/Xcode/DerivedData").expandingTildeInPath)
+        // .xcodeproj is a package (directory bundle). With treatsFilePackagesAsDirectories = false,
+        // packages appear as opaque items (like files) in the browser, so we need canChooseFiles = true.
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.treatsFilePackagesAsDirectories = false
+        // Use the system-defined UTType for Xcode projects
+        if let xcodeprojType = UTType("com.apple.xcode.project") {
+            panel.allowedContentTypes = [xcodeprojType]
         }
+        panel.message = "Select the .xcodeproj project"
+        panel.directoryURL = URL(fileURLWithPath: NSString("~/Developer").expandingTildeInPath)
 
         if panel.runModal() == .OK, let url = panel.url {
-            let field = sender.tag == 0 ? projectPathField : derivedDataField
-            field.stringValue = url.path
+            self.projectPathField.stringValue = url.path
         }
     }
 
@@ -194,11 +175,10 @@ final class ProjectEditorViewController: NSViewController {
     @objc private func save() {
         // Validate
         guard
-            !nameField.stringValue.isEmpty,
-            !projectPathField.stringValue.isEmpty,
-            !schemeField.stringValue.isEmpty,
-            !bundleIDField.stringValue.isEmpty,
-            !derivedDataField.stringValue.isEmpty else
+            !self.nameField.stringValue.isEmpty,
+            !self.projectPathField.stringValue.isEmpty,
+            !self.schemeField.stringValue.isEmpty,
+            !self.bundleIDField.stringValue.isEmpty else
         {
             let alert = NSAlert()
             alert.messageText = "Missing Fields"
@@ -209,11 +189,10 @@ final class ProjectEditorViewController: NSViewController {
 
         let updatedProject = Project(
             id: project?.id ?? UUID(),
-            name: nameField.stringValue,
-            projectPath: projectPathField.stringValue,
-            scheme: schemeField.stringValue,
-            bundleID: bundleIDField.stringValue,
-            derivedDataPath: derivedDataField.stringValue,
+            name: self.nameField.stringValue,
+            projectPath: self.projectPathField.stringValue,
+            scheme: self.schemeField.stringValue,
+            bundleID: self.bundleIDField.stringValue,
         )
 
         self.onSave(updatedProject)
