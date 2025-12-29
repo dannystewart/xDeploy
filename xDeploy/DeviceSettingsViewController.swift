@@ -28,8 +28,8 @@ final class DeviceSettingsViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
-        populateFields()
+        self.setupUI()
+        self.populateFields()
     }
 
     // MARK: - UI Setup
@@ -54,8 +54,8 @@ final class DeviceSettingsViewController: NSViewController {
         stackView.addArrangedSubview(infoLabel)
 
         // Form fields
-        stackView.addArrangedSubview(createFormRow(label: "iPhone:", field: iPhoneField))
-        stackView.addArrangedSubview(createFormRow(label: "iPad:", field: iPadField))
+        stackView.addArrangedSubview(self.createFormRow(label: "iPhone:", field: self.iPhoneField))
+        stackView.addArrangedSubview(self.createFormRow(label: "iPad:", field: self.iPadField))
 
         // Buttons
         let buttonStack = NSStackView()
@@ -111,8 +111,8 @@ final class DeviceSettingsViewController: NSViewController {
     }
 
     private func populateFields() {
-        iPhoneField.stringValue = deviceConfig.iPhoneName
-        iPadField.stringValue = deviceConfig.iPadName
+        self.iPhoneField.stringValue = self.deviceConfig.iPhoneName
+        self.iPadField.stringValue = self.deviceConfig.iPadName
     }
 
     @objc private func cancel() {
@@ -120,7 +120,7 @@ final class DeviceSettingsViewController: NSViewController {
     }
 
     @objc private func save() {
-        guard !iPhoneField.stringValue.isEmpty, !iPadField.stringValue.isEmpty else {
+        guard !self.iPhoneField.stringValue.isEmpty, !self.iPadField.stringValue.isEmpty else {
             let alert = NSAlert()
             alert.messageText = "Missing Fields"
             alert.informativeText = "Please enter both device names."
@@ -130,10 +130,10 @@ final class DeviceSettingsViewController: NSViewController {
 
         let newConfig = DeviceConfig(
             iPhoneName: iPhoneField.stringValue,
-            iPadName: iPadField.stringValue,
+            iPadName: self.iPadField.stringValue,
         )
 
-        onSave(newConfig)
+        self.onSave(newConfig)
         dismiss(nil)
     }
 }

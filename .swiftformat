@@ -80,7 +80,7 @@
 --ranges spaced
 --redundant-async tests-only
 --redundant-throws tests-only
---self remove
+--self insert
 --self-required
 --semicolons inline-only
 --short-optionals except-properties
@@ -123,4 +123,4 @@
 --xcode-indentation disabled
 --xctest-symbols
 --yoda-swap always
---enable blankLineAfterSwitchCase,blankLinesBetweenImports,blockComments,docComments,emptyExtensions,environmentEntry,markTypes,organizeDeclarations,privateStateVariables,propertyTypes,redundantAsync,redundantMemberwiseInit,redundantProperty,redundantThrows,singlePropertyPerLine,unusedPrivateDeclarations,wrapEnumCases
+--enable blankLineAfterSwitchCase,blankLinesBetweenImports,blockComments,emptyExtensions,environmentEntry,markTypes,organizeDeclarations,privateStateVariables,propertyTypes,redundantAsync,redundantMemberwiseInit,redundantProperty,redundantThrows,singlePropertyPerLine,unusedPrivateDeclarations,wrapEnumCases

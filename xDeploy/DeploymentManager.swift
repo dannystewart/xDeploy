@@ -24,7 +24,7 @@ final class DeploymentManager: @unchecked Sendable {
             "platform=iOS,name=\(deviceName)",
         ]
 
-        try await runCommand("/usr/bin/xcodebuild", arguments: args, outputHandler: outputHandler)
+        try await self.runCommand("/usr/bin/xcodebuild", arguments: args, outputHandler: outputHandler)
     }
 
     /// Installs the app on the specified device.
@@ -63,7 +63,7 @@ final class DeploymentManager: @unchecked Sendable {
             project.bundleID,
         ]
 
-        try await runCommand("/usr/bin/xcrun", arguments: args, outputHandler: outputHandler)
+        try await self.runCommand("/usr/bin/xcrun", arguments: args, outputHandler: outputHandler)
     }
 
     /// Full deployment: build + install.
@@ -75,11 +75,11 @@ final class DeploymentManager: @unchecked Sendable {
     ) async throws {
         statusHandler("Building \(project.name) for \(deviceName)...")
         outputHandler("=== Building \(project.name) for \(deviceName) ===\n")
-        try await build(project: project, deviceName: deviceName, outputHandler: outputHandler)
+        try await self.build(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
         statusHandler("Installing on \(deviceName)...")
         outputHandler("\n=== Installing on \(deviceName) ===\n")
-        try await install(project: project, deviceName: deviceName, outputHandler: outputHandler)
+        try await self.install(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
         statusHandler("✓ Installed \(project.name) on \(deviceName)")
         outputHandler("\n✓ Installation complete\n")
@@ -94,15 +94,15 @@ final class DeploymentManager: @unchecked Sendable {
     ) async throws {
         statusHandler("Building \(project.name) for \(deviceName)...")
         outputHandler("=== Building \(project.name) for \(deviceName) ===\n")
-        try await build(project: project, deviceName: deviceName, outputHandler: outputHandler)
+        try await self.build(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
         statusHandler("Installing on \(deviceName)...")
         outputHandler("\n=== Installing on \(deviceName) ===\n")
-        try await install(project: project, deviceName: deviceName, outputHandler: outputHandler)
+        try await self.install(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
         statusHandler("Launching on \(deviceName)...")
         outputHandler("\n=== Launching on \(deviceName) ===\n")
-        try await launch(project: project, deviceName: deviceName, outputHandler: outputHandler)
+        try await self.launch(project: project, deviceName: deviceName, outputHandler: outputHandler)
 
         statusHandler("✓ Running \(project.name) on \(deviceName)")
         outputHandler("\n✓ Launch complete\n")

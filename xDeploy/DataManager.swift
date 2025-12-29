@@ -7,12 +7,12 @@ final class DataManager {
     private let fileManager: FileManager = .default
 
     private var dataFileURL: URL {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appSupport = self.fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let appFolder = appSupport.appendingPathComponent("xDeploy", isDirectory: true)
 
         // Ensure directory exists
-        if !fileManager.fileExists(atPath: appFolder.path) {
-            try? fileManager.createDirectory(at: appFolder, withIntermediateDirectories: true)
+        if !self.fileManager.fileExists(atPath: appFolder.path) {
+            try? self.fileManager.createDirectory(at: appFolder, withIntermediateDirectories: true)
         }
 
         return appFolder.appendingPathComponent("data.json")
@@ -21,7 +21,7 @@ final class DataManager {
     private init() {}
 
     func load() -> AppData {
-        guard fileManager.fileExists(atPath: dataFileURL.path) else {
+        guard self.fileManager.fileExists(atPath: self.dataFileURL.path) else {
             return .empty
         }
 
@@ -40,7 +40,7 @@ final class DataManager {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(appData)
-            try data.write(to: dataFileURL, options: .atomic)
+            try data.write(to: self.dataFileURL, options: .atomic)
         } catch {
             print("Failed to save data: \(error)")
         }

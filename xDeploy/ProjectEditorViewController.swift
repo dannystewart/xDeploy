@@ -27,13 +27,13 @@ final class ProjectEditorViewController: NSViewController {
     }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 320))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 260))
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
-        populateFields()
+        self.setupUI()
+        self.populateFields()
     }
 
     // MARK: - UI Setup
@@ -52,20 +52,20 @@ final class ProjectEditorViewController: NSViewController {
         stackView.addArrangedSubview(titleLabel)
 
         // Form fields
-        stackView.addArrangedSubview(createFormRow(label: "Name:", field: nameField, placeholder: "My App"))
+        stackView.addArrangedSubview(self.createFormRow(label: "Name:", field: self.nameField, placeholder: "My App"))
         stackView.addArrangedSubview(
-            createFormRow(
+            self.createFormRow(
                 label: "Project Path:",
-                field: projectPathField,
+                field: self.projectPathField,
                 placeholder: "~/Developer/MyApp/MyApp.xcodeproj",
                 withBrowse: true,
             ),
         )
-        stackView.addArrangedSubview(createFormRow(label: "Scheme:", field: schemeField, placeholder: "MyApp"))
+        stackView.addArrangedSubview(self.createFormRow(label: "Scheme:", field: self.schemeField, placeholder: "MyApp"))
         stackView.addArrangedSubview(
-            createFormRow(
+            self.createFormRow(
                 label: "Bundle ID:",
-                field: bundleIDField,
+                field: self.bundleIDField,
                 placeholder: "com.example.MyApp",
             ),
         )
@@ -216,7 +216,7 @@ final class ProjectEditorViewController: NSViewController {
             derivedDataPath: derivedDataField.stringValue,
         )
 
-        onSave(updatedProject)
+        self.onSave(updatedProject)
         dismiss(nil)
     }
 }

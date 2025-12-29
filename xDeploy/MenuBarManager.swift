@@ -14,7 +14,7 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
     init(mainViewController: MainViewController) {
         self.mainViewController = mainViewController
         super.init()
-        setupStatusItem()
+        self.setupStatusItem()
     }
 
     // MARK: - NSMenuDelegate
@@ -33,7 +33,7 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
             for (index, project) in appData.projects.enumerated() {
                 let item = NSMenuItem(
                     title: "Run \(project.name)",
-                    action: #selector(runProject(_:)),
+                    action: #selector(self.runProject(_:)),
                     keyEquivalent: "",
                 )
                 item.target = self
@@ -57,7 +57,7 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
             keyEquivalent: "",
         )
         iPhoneItem.target = self
-        iPhoneItem.state = selectedDevice == .iPhone ? .on : .off
+        iPhoneItem.state = self.selectedDevice == .iPhone ? .on : .off
         menu.addItem(iPhoneItem)
 
         let iPadItem = NSMenuItem(
@@ -66,12 +66,12 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
             keyEquivalent: "",
         )
         iPadItem.target = self
-        iPadItem.state = selectedDevice == .iPad ? .on : .off
+        iPadItem.state = self.selectedDevice == .iPad ? .on : .off
         menu.addItem(iPadItem)
     }
 
     private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem?.button {
             let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .medium)
@@ -81,15 +81,15 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
 
         let menu = NSMenu()
         menu.delegate = self
-        statusItem?.menu = menu
+        self.statusItem?.menu = menu
     }
 
     @objc private func selectiPhone() {
-        selectedDevice = .iPhone
+        self.selectedDevice = .iPhone
     }
 
     @objc private func selectiPad() {
-        selectedDevice = .iPad
+        self.selectedDevice = .iPad
     }
 
     @objc private func runProject(_ sender: NSMenuItem) {
@@ -103,11 +103,11 @@ final class MenuBarManager: NSObject, NSMenuDelegate {
             DataManager.shared.save(appData)
         }
 
-        let deviceName = selectedDevice == .iPhone
+        let deviceName = self.selectedDevice == .iPhone
             ? appData.deviceConfig.iPhoneName
             : appData.deviceConfig.iPadName
 
-        let viewController = mainViewController
+        let viewController = self.mainViewController
         viewController?.clearConsole()
 
         Task {

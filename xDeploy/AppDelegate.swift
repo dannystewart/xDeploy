@@ -6,10 +6,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarManager: MenuBarManager?
 
     func applicationDidFinishLaunching(_: Notification) {
-        setupMainMenu()
-        setupMainWindow()
+        self.setupMainMenu()
+        self.setupMainWindow()
         if let viewController = mainViewController {
-            menuBarManager = MenuBarManager(mainViewController: viewController)
+            self.menuBarManager = MenuBarManager(mainViewController: viewController)
         }
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -68,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupMainWindow() {
         let viewController = MainViewController()
-        mainViewController = viewController
+        self.mainViewController = viewController
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 660, height: 356),
@@ -90,6 +90,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.toolbarStyle = .unified
 
         window.makeKeyAndOrderFront(nil)
-        mainWindow = window
+        self.mainWindow = window
     }
 }

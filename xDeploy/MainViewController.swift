@@ -1,156 +1,5 @@
 import AppKit
 
-// MARK: - DeviceButtonView
-
-/// A large button with an icon and label, used for device selection.
-/// Lights up blue when `isDeploying` is true.
-final class DeviceButtonView: NSView {
-    var isDeploying: Bool = false {
-        didSet { updateAppearance() }
-    }
-
-    var isEnabled: Bool = true {
-        didSet { updateAppearance() }
-    }
-
-    var onClick: (() -> Void)?
-
-    private let iconView: NSImageView
-    private let label: NSTextField
-    private var trackingArea: NSTrackingArea?
-
-    private var isHovered = false
-    private var isPressed = false
-
-    init(title: String, symbolName: String) {
-        iconView = NSImageView()
-        label = NSTextField(labelWithString: title)
-
-        super.init(frame: .zero)
-
-        wantsLayer = true
-        layer?.cornerRadius = 8
-
-        // Configure icon
-        let config = NSImage.SymbolConfiguration(pointSize: 36, weight: .light)
-        iconView.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: title)?
-            .withSymbolConfiguration(config)
-        iconView.imageScaling = .scaleProportionallyUpOrDown
-        iconView.translatesAutoresizingMaskIntoConstraints = false
-
-        // Configure label
-        label.font = .systemFont(ofSize: 16, weight: .medium)
-        label.alignment = .left
-        label.isBezeled = false
-        label.isBordered = false
-        label.drawsBackground = false
-        label.translatesAutoresizingMaskIntoConstraints = false
-
-        // Use a stack view to group icon and label, then center the stack
-        let contentStack = NSStackView(views: [iconView, label])
-        contentStack.orientation = .horizontal
-        contentStack.spacing = 10
-        contentStack.alignment = .centerY
-        contentStack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(contentStack)
-
-        // Center the content stack within the button (with slight left offset for visual balance)
-        NSLayoutConstraint.activate([
-            iconView.widthAnchor.constraint(equalToConstant: 42),
-            iconView.heightAnchor.constraint(equalToConstant: 42),
-
-            contentStack.centerXAnchor.constraint(equalTo: centerXAnchor, constant: -4),
-            contentStack.centerYAnchor.constraint(equalTo: centerYAnchor),
-            contentStack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 16),
-            contentStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -16),
-        ])
-
-        updateAppearance()
-    }
-
-    @available(*, unavailable)
-    required init?(coder _: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let existing = trackingArea {
-            removeTrackingArea(existing)
-        }
-        trackingArea = NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeInKeyWindow],
-            owner: self,
-            userInfo: nil,
-        )
-        addTrackingArea(trackingArea!)
-    }
-
-    override func mouseEntered(with _: NSEvent) {
-        guard isEnabled else { return }
-        isHovered = true
-        updateAppearance()
-    }
-
-    override func mouseExited(with _: NSEvent) {
-        isHovered = false
-        isPressed = false
-        updateAppearance()
-    }
-
-    override func mouseDown(with _: NSEvent) {
-        guard isEnabled else { return }
-        isPressed = true
-        updateAppearance()
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        guard isEnabled, isPressed else { return }
-        isPressed = false
-
-        let location = convert(event.locationInWindow, from: nil)
-        if bounds.contains(location) {
-            onClick?()
-        }
-
-        updateAppearance()
-    }
-
-    private func updateAppearance() {
-        let backgroundColor: NSColor
-        let contentColor: NSColor
-
-        if !isEnabled {
-            backgroundColor = .secondarySystemFill
-            contentColor = .disabledControlTextColor
-        } else if isDeploying {
-            // Blue highlight while deploying
-            if isPressed {
-                backgroundColor = NSColor.controlAccentColor.blended(withFraction: 0.2, of: .black) ?? .controlAccentColor
-            } else if isHovered {
-                backgroundColor = NSColor.controlAccentColor.blended(withFraction: 0.1, of: .white) ?? .controlAccentColor
-            } else {
-                backgroundColor = .controlAccentColor
-            }
-            contentColor = .white
-        } else {
-            if isPressed {
-                backgroundColor = NSColor.gray.withAlphaComponent(0.45)
-            } else if isHovered {
-                backgroundColor = NSColor.gray.withAlphaComponent(0.35)
-            } else {
-                backgroundColor = NSColor.gray.withAlphaComponent(0.25)
-            }
-            contentColor = .labelColor
-        }
-
-        layer?.backgroundColor = backgroundColor.cgColor
-        iconView.contentTintColor = contentColor
-        label.textColor = contentColor
-    }
-}
-
 // MARK: - MainViewController
 
 final class MainViewController: NSViewController {
@@ -193,11 +42,11 @@ final class MainViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        loadData()
-        setupUI()
-        reloadProjects()
-        restoreSelectedProject()
-        updateButtonStates()
+        self.loadData()
+        self.setupUI()
+        self.reloadProjects()
+        self.restoreSelectedProject()
+        self.updateButtonStates()
 
         // Add keyboard shortcut monitoring for ⌘+Backspace
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -207,10 +56,10 @@ final class MainViewController: NSViewController {
                 event.keyCode == 51 // Backspace
             {
                 if
-                    view.window?.firstResponder === projectTableView,
-                    selectedProjectIndex != nil
+                    view.window?.firstResponder === self.projectTableView,
+                    self.selectedProjectIndex != nil
                 {
-                    removeSelectedProject()
+                    self.removeSelectedProject()
                     return nil
                 }
             }
@@ -219,7 +68,7 @@ final class MainViewController: NSViewController {
     }
 
     @objc func addProject() {
-        showProjectEditor(project: nil)
+        self.showProjectEditor(project: nil)
     }
 
     @objc func showSettings() {
@@ -232,12 +81,12 @@ final class MainViewController: NSViewController {
 
     func clearConsole() {
         guard isViewLoaded else { return }
-        consoleTextView.string = ""
+        self.consoleTextView.string = ""
     }
 
     func appendToConsole(_ text: String) {
         guard isViewLoaded else { return }
-        consoleTextView.textStorage?.append(NSAttributedString(
+        self.consoleTextView.textStorage?.append(NSAttributedString(
             string: text,
             attributes: [
                 .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
@@ -247,18 +96,18 @@ final class MainViewController: NSViewController {
 
         // Auto-scroll to bottom only if window is visible
         if view.window?.isVisible == true {
-            consoleTextView.scrollToEndOfDocument(nil)
+            self.consoleTextView.scrollToEndOfDocument(nil)
         }
     }
 
     // MARK: - Data
 
     private func loadData() {
-        appData = DataManager.shared.load()
+        self.appData = DataManager.shared.load()
     }
 
     private func saveData() {
-        DataManager.shared.save(appData)
+        DataManager.shared.save(self.appData)
     }
 
     private func restoreSelectedProject() {
@@ -266,8 +115,8 @@ final class MainViewController: NSViewController {
             let savedID = appData.selectedProjectID,
             let index = appData.projects.firstIndex(where: { $0.id == savedID }) else { return }
 
-        selectedProjectIndex = index
-        projectTableView.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
+        self.selectedProjectIndex = index
+        self.projectTableView.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
     }
 
     // MARK: - UI Setup
@@ -276,25 +125,25 @@ final class MainViewController: NSViewController {
         view.wantsLayer = true
 
         // Project list (fixed width, full height on left)
-        let projectScrollView = createProjectListScrollView()
+        let projectScrollView = self.createProjectListScrollView()
         projectScrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(projectScrollView)
 
         // Button grid (top-right area)
-        let buttonGrid = createButtonGrid()
+        let buttonGrid = self.createButtonGrid()
         buttonGrid.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(buttonGrid)
 
         // Console (below buttons, to the right of project list)
-        createConsoleView()
-        consoleScrollView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(consoleScrollView)
+        self.createConsoleView()
+        self.consoleScrollView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(self.consoleScrollView)
 
         // Status bar at very bottom
-        statusLabel.font = .systemFont(ofSize: 12)
-        statusLabel.textColor = .secondaryLabelColor
-        statusLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(statusLabel)
+        self.statusLabel.font = .systemFont(ofSize: 12)
+        self.statusLabel.textColor = .secondaryLabelColor
+        self.statusLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(self.statusLabel)
 
         // Layout constants
         let padding: CGFloat = 20
@@ -306,7 +155,7 @@ final class MainViewController: NSViewController {
             projectScrollView.topAnchor.constraint(equalTo: view.topAnchor, constant: padding),
             projectScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: padding),
             projectScrollView.widthAnchor.constraint(equalToConstant: projectListWidth),
-            projectScrollView.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -8),
+            projectScrollView.bottomAnchor.constraint(equalTo: self.statusLabel.topAnchor, constant: -8),
 
             // Button grid: top-right, fixed height
             buttonGrid.topAnchor.constraint(equalTo: view.topAnchor, constant: padding),
@@ -315,47 +164,47 @@ final class MainViewController: NSViewController {
             buttonGrid.heightAnchor.constraint(equalToConstant: buttonGridHeight),
 
             // Console: below buttons, from project list edge to window edge
-            consoleScrollView.topAnchor.constraint(equalTo: buttonGrid.bottomAnchor, constant: padding),
-            consoleScrollView.leadingAnchor.constraint(equalTo: projectScrollView.trailingAnchor, constant: padding),
-            consoleScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -padding),
-            consoleScrollView.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -8),
+            self.consoleScrollView.topAnchor.constraint(equalTo: buttonGrid.bottomAnchor, constant: padding),
+            self.consoleScrollView.leadingAnchor.constraint(equalTo: projectScrollView.trailingAnchor, constant: padding),
+            self.consoleScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -padding),
+            self.consoleScrollView.bottomAnchor.constraint(equalTo: self.statusLabel.topAnchor, constant: -8),
 
             // Status bar
-            statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            statusLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -8),
+            self.statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            self.statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            self.statusLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -8),
         ])
     }
 
     private func createProjectListScrollView() -> NSScrollView {
         // Table view for projects
-        projectTableView.delegate = self
-        projectTableView.dataSource = self
-        projectTableView.headerView = nil
-        projectTableView.rowHeight = 48
-        projectTableView.selectionHighlightStyle = .regular
-        projectTableView.allowsEmptySelection = true
-        projectTableView.usesAlternatingRowBackgroundColors = true
-        projectTableView.gridStyleMask = []
-        projectTableView.doubleAction = #selector(editSelectedProject)
-        projectTableView.target = self
+        self.projectTableView.delegate = self
+        self.projectTableView.dataSource = self
+        self.projectTableView.headerView = nil
+        self.projectTableView.rowHeight = 48
+        self.projectTableView.selectionHighlightStyle = .regular
+        self.projectTableView.allowsEmptySelection = true
+        self.projectTableView.usesAlternatingRowBackgroundColors = true
+        self.projectTableView.gridStyleMask = []
+        self.projectTableView.doubleAction = #selector(self.editSelectedProject)
+        self.projectTableView.target = self
 
         // Enable drag-and-drop reordering
-        projectTableView.registerForDraggedTypes([Self.projectDragType])
+        self.projectTableView.registerForDraggedTypes([Self.projectDragType])
 
         // Context menu for rows
         let menu = NSMenu()
         menu.delegate = self
         menu.addItem(NSMenuItem(title: "Edit", action: #selector(editClickedProject), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Delete", action: #selector(deleteClickedProject), keyEquivalent: ""))
-        projectTableView.menu = menu
+        self.projectTableView.menu = menu
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("ProjectColumn"))
         column.title = "Projects"
-        projectTableView.addTableColumn(column)
+        self.projectTableView.addTableColumn(column)
 
         let scrollView = NSScrollView()
-        scrollView.documentView = projectTableView
+        scrollView.documentView = self.projectTableView
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .bezelBorder
@@ -373,18 +222,18 @@ final class MainViewController: NSViewController {
         deviceRow.distribution = .fillEqually
         deviceRow.translatesAutoresizingMaskIntoConstraints = false
 
-        iPhoneButton = DeviceButtonView(title: "iPhone", symbolName: "iphone")
-        iPhoneButton.onClick = { [weak self] in
+        self.iPhoneButton = DeviceButtonView(title: "iPhone", symbolName: "iphone")
+        self.iPhoneButton.onClick = { [weak self] in
             self?.performDeploymentToDevice(.iPhone)
         }
 
-        iPadButton = DeviceButtonView(title: "iPad", symbolName: "ipad.landscape")
-        iPadButton.onClick = { [weak self] in
+        self.iPadButton = DeviceButtonView(title: "iPad", symbolName: "ipad.landscape")
+        self.iPadButton.onClick = { [weak self] in
             self?.performDeploymentToDevice(.iPad)
         }
 
-        deviceRow.addArrangedSubview(iPhoneButton)
-        deviceRow.addArrangedSubview(iPadButton)
+        deviceRow.addArrangedSubview(self.iPhoneButton)
+        deviceRow.addArrangedSubview(self.iPadButton)
 
         container.addSubview(deviceRow)
 
@@ -400,87 +249,87 @@ final class MainViewController: NSViewController {
     }
 
     private func createConsoleView() {
-        consoleTextView = NSTextView()
-        consoleTextView.isEditable = false
-        consoleTextView.isSelectable = true
-        consoleTextView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
-        consoleTextView.backgroundColor = NSColor.textBackgroundColor
-        consoleTextView.textColor = .textColor
-        consoleTextView.autoresizingMask = [.width]
-        consoleTextView.isVerticallyResizable = true
-        consoleTextView.isHorizontallyResizable = false
-        consoleTextView.textContainer?.widthTracksTextView = true
-        consoleTextView.textContainer?.containerSize = NSSize(
+        self.consoleTextView = NSTextView()
+        self.consoleTextView.isEditable = false
+        self.consoleTextView.isSelectable = true
+        self.consoleTextView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        self.consoleTextView.backgroundColor = NSColor.textBackgroundColor
+        self.consoleTextView.textColor = .textColor
+        self.consoleTextView.autoresizingMask = [.width]
+        self.consoleTextView.isVerticallyResizable = true
+        self.consoleTextView.isHorizontallyResizable = false
+        self.consoleTextView.textContainer?.widthTracksTextView = true
+        self.consoleTextView.textContainer?.containerSize = NSSize(
             width: CGFloat.greatestFiniteMagnitude,
             height: CGFloat.greatestFiniteMagnitude,
         )
 
-        consoleScrollView = NSScrollView()
-        consoleScrollView.documentView = consoleTextView
-        consoleScrollView.hasVerticalScroller = true
-        consoleScrollView.hasHorizontalScroller = false
-        consoleScrollView.autohidesScrollers = true
-        consoleScrollView.borderType = .bezelBorder
+        self.consoleScrollView = NSScrollView()
+        self.consoleScrollView.documentView = self.consoleTextView
+        self.consoleScrollView.hasVerticalScroller = true
+        self.consoleScrollView.hasHorizontalScroller = false
+        self.consoleScrollView.autohidesScrollers = true
+        self.consoleScrollView.borderType = .bezelBorder
 
         // Prevent console from forcing window to expand when content is added
-        consoleScrollView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        consoleScrollView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        self.consoleScrollView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        self.consoleScrollView.setContentHuggingPriority(.defaultLow, for: .horizontal)
     }
 
     // MARK: - Projects
 
     private func reloadProjects() {
-        projectTableView.reloadData()
-        updateButtonStates()
+        self.projectTableView.reloadData()
+        self.updateButtonStates()
     }
 
     private func updateButtonStates() {
-        let hasSelection = selectedProjectIndex != nil && selectedProjectIndex! < appData.projects.count
+        let hasSelection = self.selectedProjectIndex != nil && self.selectedProjectIndex! < self.appData.projects.count
 
         // Update toolbar segmented control
-        actionModeControl?.selectedSegment = isRunMode ? 0 : 1
+        self.actionModeControl?.selectedSegment = self.isRunMode ? 0 : 1
 
         // Device buttons enabled only when a project is selected
-        iPhoneButton.isEnabled = hasSelection
-        iPadButton.isEnabled = hasSelection
+        self.iPhoneButton.isEnabled = hasSelection
+        self.iPadButton.isEnabled = hasSelection
 
         // Update deploying state
-        iPhoneButton.isDeploying = deployingDevice == .iPhone
-        iPadButton.isDeploying = deployingDevice == .iPad
+        self.iPhoneButton.isDeploying = self.deployingDevice == .iPhone
+        self.iPadButton.isDeploying = self.deployingDevice == .iPad
 
         // Update status
         if !hasSelection {
-            statusLabel.stringValue = appData.projects.isEmpty ? "Add a project to get started" : "Select a project"
+            self.statusLabel.stringValue = self.appData.projects.isEmpty ? "Add a project to get started" : "Select a project"
         } else {
-            let project = appData.projects[selectedProjectIndex!]
-            let action = isRunMode ? "run" : "install"
-            statusLabel.stringValue = "Select a device to \(action) \(project.name)"
+            let project = self.appData.projects[self.selectedProjectIndex!]
+            let action = self.isRunMode ? "run" : "install"
+            self.statusLabel.stringValue = "Select a device to \(action) \(project.name)"
         }
     }
 
     private func performDeploymentToDevice(_ deviceType: DeviceType) {
         guard let index = selectedProjectIndex, index < appData.projects.count else { return }
-        let project = appData.projects[index]
+        let project = self.appData.projects[index]
 
         let deviceName: String
         let deviceLabel: String
         switch deviceType {
         case .iPhone:
-            deviceName = appData.deviceConfig.iPhoneName
+            deviceName = self.appData.deviceConfig.iPhoneName
             deviceLabel = "iPhone"
 
         case .iPad:
-            deviceName = appData.deviceConfig.iPadName
+            deviceName = self.appData.deviceConfig.iPadName
             deviceLabel = "iPad"
         }
 
-        deployingDevice = deviceType
-        setUIEnabled(false)
-        clearConsole()
+        self.deployingDevice = deviceType
+        self.setUIEnabled(false)
+        self.clearConsole()
 
         Task {
             do {
-                if isRunMode {
+                if self.isRunMode {
                     try await DeploymentManager.shared.deployRun(
                         project: project,
                         deviceName: deviceName,
@@ -517,17 +366,17 @@ final class MainViewController: NSViewController {
                 }
 
                 await MainActor.run {
-                    let action = isRunMode ? "running" : "installed"
-                    statusLabel.stringValue = "✓ \(project.name) \(action) on \(deviceLabel)"
-                    deployingDevice = nil
-                    setUIEnabled(true)
+                    let action = self.isRunMode ? "running" : "installed"
+                    self.statusLabel.stringValue = "✓ \(project.name) \(action) on \(deviceLabel)"
+                    self.deployingDevice = nil
+                    self.setUIEnabled(true)
                 }
             } catch {
                 await MainActor.run {
-                    appendToConsole("\n✗ Error: \(error.localizedDescription)\n")
-                    statusLabel.stringValue = "✗ Error: \(error.localizedDescription)"
-                    deployingDevice = nil
-                    setUIEnabled(true)
+                    self.appendToConsole("\n✗ Error: \(error.localizedDescription)\n")
+                    self.statusLabel.stringValue = "✗ Error: \(error.localizedDescription)"
+                    self.deployingDevice = nil
+                    self.setUIEnabled(true)
 
                     let alert = NSAlert()
                     alert.messageText = "Deployment Failed"
@@ -540,25 +389,25 @@ final class MainViewController: NSViewController {
     }
 
     private func setUIEnabled(_ enabled: Bool) {
-        iPhoneButton.isEnabled = enabled
-        iPadButton.isEnabled = enabled
+        self.iPhoneButton.isEnabled = enabled
+        self.iPadButton.isEnabled = enabled
         // Action buttons always stay enabled for mode switching
-        projectTableView.isEnabled = enabled
-        updateButtonStates()
+        self.projectTableView.isEnabled = enabled
+        self.updateButtonStates()
     }
 
     @objc private func editSelectedProject() {
         // Only edit if double-clicked on an actual row
-        let clickedRow = projectTableView.clickedRow
-        guard clickedRow >= 0, clickedRow < appData.projects.count else { return }
-        let project = appData.projects[clickedRow]
-        showProjectEditor(project: project)
+        let clickedRow = self.projectTableView.clickedRow
+        guard clickedRow >= 0, clickedRow < self.appData.projects.count else { return }
+        let project = self.appData.projects[clickedRow]
+        self.showProjectEditor(project: project)
     }
 
     @objc private func removeSelectedProject() {
         guard let index = selectedProjectIndex, index < appData.projects.count else { return }
 
-        let project = appData.projects[index]
+        let project = self.appData.projects[index]
 
         let alert = NSAlert()
         alert.messageText = "Delete \(project.name)?"
@@ -568,11 +417,11 @@ final class MainViewController: NSViewController {
         alert.addButton(withTitle: "Cancel")
 
         if alert.runModal() == .alertFirstButtonReturn {
-            appData.projects.remove(at: index)
-            selectedProjectIndex = nil
-            appData.selectedProjectID = nil
-            saveData()
-            reloadProjects()
+            self.appData.projects.remove(at: index)
+            self.selectedProjectIndex = nil
+            self.appData.selectedProjectID = nil
+            self.saveData()
+            self.reloadProjects()
         }
     }
 
@@ -584,19 +433,19 @@ final class MainViewController: NSViewController {
                 let existing = project,
                 let index = appData.projects.firstIndex(where: { $0.id == existing.id })
             {
-                appData.projects[index] = updatedProject
+                self.appData.projects[index] = updatedProject
             } else {
-                appData.projects.append(updatedProject)
+                self.appData.projects.append(updatedProject)
             }
 
-            saveData()
-            reloadProjects()
+            self.saveData()
+            self.reloadProjects()
 
             // Select newly added project
             if project == nil {
-                selectedProjectIndex = appData.projects.count - 1
-                projectTableView.selectRowIndexes(IndexSet(integer: selectedProjectIndex!), byExtendingSelection: false)
-                updateButtonStates()
+                self.selectedProjectIndex = self.appData.projects.count - 1
+                self.projectTableView.selectRowIndexes(IndexSet(integer: self.selectedProjectIndex!), byExtendingSelection: false)
+                self.updateButtonStates()
             }
         }
 
@@ -608,7 +457,7 @@ final class MainViewController: NSViewController {
 
 extension MainViewController: NSTableViewDataSource {
     func numberOfRows(in _: NSTableView) -> Int {
-        appData.projects.count
+        self.appData.projects.count
     }
 
     // MARK: Drag and Drop
@@ -628,7 +477,7 @@ extension MainViewController: NSTableViewDataSource {
         // Only allow drops between rows (not on rows)
         guard operation == .above else { return [] }
         // Only allow internal drags
-        guard info.draggingSource as? NSTableView === projectTableView else { return [] }
+        guard info.draggingSource as? NSTableView === self.projectTableView else { return [] }
         return .move
     }
 
@@ -647,17 +496,17 @@ extension MainViewController: NSTableViewDataSource {
         guard sourceRow != row, sourceRow + 1 != row else { return false }
 
         // Move the project in our data
-        let project = appData.projects.remove(at: sourceRow)
+        let project = self.appData.projects.remove(at: sourceRow)
         let destinationRow = sourceRow < row ? row - 1 : row
-        appData.projects.insert(project, at: destinationRow)
+        self.appData.projects.insert(project, at: destinationRow)
 
         // Animate the row move
         tableView.moveRow(at: sourceRow, to: destinationRow)
 
         // Update selection to follow the moved item
-        selectedProjectIndex = destinationRow
+        self.selectedProjectIndex = destinationRow
 
-        saveData()
+        self.saveData()
 
         return true
     }
@@ -719,7 +568,7 @@ extension MainViewController: NSTableViewDelegate {
             ])
         }
 
-        let project = appData.projects[row]
+        let project = self.appData.projects[row]
         cellView?.textField?.stringValue = project.name
 
         // Set folder path with ~ abbreviation
@@ -750,18 +599,18 @@ extension MainViewController: NSTableViewDelegate {
     }
 
     func tableViewSelectionDidChange(_: Notification) {
-        let selectedRow = projectTableView.selectedRow
-        selectedProjectIndex = selectedRow >= 0 ? selectedRow : nil
+        let selectedRow = self.projectTableView.selectedRow
+        self.selectedProjectIndex = selectedRow >= 0 ? selectedRow : nil
 
         // Remember the selected project for next launch
         if let index = selectedProjectIndex, index < appData.projects.count {
-            appData.selectedProjectID = appData.projects[index].id
+            self.appData.selectedProjectID = self.appData.projects[index].id
         } else {
-            appData.selectedProjectID = nil
+            self.appData.selectedProjectID = nil
         }
-        saveData()
+        self.saveData()
 
-        updateButtonStates()
+        self.updateButtonStates()
     }
 }
 
@@ -772,13 +621,13 @@ extension MainViewController: NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard
-            menu === projectTableView.menu,
+            menu === self.projectTableView.menu,
             let window = projectTableView.window else { return }
 
         let screenPoint = NSEvent.mouseLocation
         let windowPoint = window.convertPoint(fromScreen: screenPoint)
-        let tablePoint = projectTableView.convert(windowPoint, from: nil)
-        Self.clickedRow = projectTableView.row(at: tablePoint)
+        let tablePoint = self.projectTableView.convert(windowPoint, from: nil)
+        Self.clickedRow = self.projectTableView.row(at: tablePoint)
 
         // Enable/disable menu items based on clicked row
         let hasClickedRow = Self.clickedRow >= 0
@@ -788,14 +637,14 @@ extension MainViewController: NSMenuDelegate {
     }
 
     @objc func editClickedProject() {
-        guard Self.clickedRow >= 0, Self.clickedRow < appData.projects.count else { return }
-        let project = appData.projects[Self.clickedRow]
-        showProjectEditor(project: project)
+        guard Self.clickedRow >= 0, Self.clickedRow < self.appData.projects.count else { return }
+        let project = self.appData.projects[Self.clickedRow]
+        self.showProjectEditor(project: project)
     }
 
     @objc func deleteClickedProject() {
-        guard Self.clickedRow >= 0, Self.clickedRow < appData.projects.count else { return }
-        let project = appData.projects[Self.clickedRow]
+        guard Self.clickedRow >= 0, Self.clickedRow < self.appData.projects.count else { return }
+        let project = self.appData.projects[Self.clickedRow]
 
         let alert = NSAlert()
         alert.messageText = "Delete \(project.name)?"
@@ -805,20 +654,20 @@ extension MainViewController: NSMenuDelegate {
         alert.addButton(withTitle: "Cancel")
 
         if alert.runModal() == .alertFirstButtonReturn {
-            let deletedProjectID = appData.projects[Self.clickedRow].id
-            appData.projects.remove(at: Self.clickedRow)
-            if selectedProjectIndex == Self.clickedRow {
-                selectedProjectIndex = nil
-                appData.selectedProjectID = nil
+            let deletedProjectID = self.appData.projects[Self.clickedRow].id
+            self.appData.projects.remove(at: Self.clickedRow)
+            if self.selectedProjectIndex == Self.clickedRow {
+                self.selectedProjectIndex = nil
+                self.appData.selectedProjectID = nil
             } else if let selected = selectedProjectIndex, selected > Self.clickedRow {
-                selectedProjectIndex = selected - 1
+                self.selectedProjectIndex = selected - 1
             }
             // Clear selectedProjectID if the deleted project was the remembered one
-            if appData.selectedProjectID == deletedProjectID {
-                appData.selectedProjectID = nil
+            if self.appData.selectedProjectID == deletedProjectID {
+                self.appData.selectedProjectID = nil
             }
-            saveData()
-            reloadProjects()
+            self.saveData()
+            self.reloadProjects()
         }
     }
 }
@@ -843,7 +692,7 @@ extension MainViewController: NSToolbarDelegate {
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        toolbarDefaultItemIdentifiers(toolbar)
+        self.toolbarDefaultItemIdentifiers(toolbar)
     }
 
     func toolbar(
@@ -859,7 +708,7 @@ extension MainViewController: NSToolbarDelegate {
             item.toolTip = "Add a new project"
             item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "Add Project")
             item.target = self
-            item.action = #selector(addProject)
+            item.action = #selector(self.addProject)
             item.isNavigational = true
             return item
 
@@ -870,15 +719,15 @@ extension MainViewController: NSToolbarDelegate {
             item.toolTip = "Device Settings"
             item.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Settings")
             item.target = self
-            item.action = #selector(showSettings)
+            item.action = #selector(self.showSettings)
             item.isNavigational = true
             return item
 
         case Self.actionModeIdentifier:
             let segmentedControl = NSSegmentedControl(labels: ["Run Now", "Install Only"], trackingMode: .selectOne, target: self, action: #selector(actionModeChanged(_:)))
-            segmentedControl.selectedSegment = isRunMode ? 0 : 1
+            segmentedControl.selectedSegment = self.isRunMode ? 0 : 1
             segmentedControl.segmentStyle = .automatic
-            actionModeControl = segmentedControl
+            self.actionModeControl = segmentedControl
 
             let item = NSToolbarItem(itemIdentifier: itemIdentifier)
             item.label = "Action"
@@ -892,10 +741,10 @@ extension MainViewController: NSToolbarDelegate {
             item.label = "Pin"
             item.paletteLabel = "Always on Top"
             item.toolTip = "Keep window above other windows"
-            item.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: "Always on Top")
+            item.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: "Always on Top")
             item.target = self
-            item.action = #selector(toggleAlwaysOnTop)
-            alwaysOnTopButton = item
+            item.action = #selector(self.toggleAlwaysOnTop)
+            self.alwaysOnTopButton = item
             return item
 
         default:
@@ -904,19 +753,19 @@ extension MainViewController: NSToolbarDelegate {
     }
 
     @objc private func actionModeChanged(_ sender: NSSegmentedControl) {
-        isRunMode = sender.selectedSegment == 0
-        updateButtonStates()
+        self.isRunMode = sender.selectedSegment == 0
+        self.updateButtonStates()
     }
 
     @objc private func toggleAlwaysOnTop() {
-        isAlwaysOnTop.toggle()
+        self.isAlwaysOnTop.toggle()
 
-        if isAlwaysOnTop {
+        if self.isAlwaysOnTop {
             view.window?.level = .floating
-            alwaysOnTopButton?.image = NSImage(systemSymbolName: "macwindow.badge.plus", accessibilityDescription: "Always on Top (Active)")
+            self.alwaysOnTopButton?.image = NSImage(systemSymbolName: "pin", accessibilityDescription: "Always on Top (Active)")
         } else {
             view.window?.level = .normal
-            alwaysOnTopButton?.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: "Always on Top")
+            self.alwaysOnTopButton?.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: "Always on Top")
         }
     }
 }
