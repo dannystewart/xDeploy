@@ -6,6 +6,24 @@
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
       buildArchitectures = "Automatic">
+      <PreActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Run Script"
+               scriptText = "#!/bin/sh&#10;set -e&#10;&#10;# Manual offset in case commit count decreases&#10;OFFSET=0&#10;&#10;# 1. Figure out paths&#10;BUILD_CONFIG=&quot;${PROJECT_DIR}/BuildNumber.xcconfig&quot;&#10;&#10;# 2. Generate build number from commit count + offset&#10;COMMIT_COUNT=$(git -C &quot;$PROJECT_DIR&quot; rev-list --count HEAD 2&gt;/dev/null || echo 1)&#10;BUILD_NUMBER=$((COMMIT_COUNT + OFFSET))&#10;&#10;# 3. Write the new value back to BuildNumber.xcconfig&#10;cat &gt; &quot;$BUILD_CONFIG&quot; &lt;&lt;EOF&#10;// Auto-generated. Do not edit by hand.&#10;&#10;CURRENT_PROJECT_VERSION = $BUILD_NUMBER&#10;EOF&#10;&#10;echo &quot;Updated $BUILD_CONFIG to build $BUILD_NUMBER&quot;&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "30D1DDB62EE33CB200943464"
+                     BuildableName = "xDeploy.app"
+                     BlueprintName = "xDeploy"
+                     ReferencedContainer = "container:xDeploy.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PreActions>
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -40,24 +58,6 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <PreActions>
-         <ExecutionAction
-            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
-            <ActionContent
-               title = "Run Script"
-               scriptText = "#!/bin/sh&#10;set -e&#10;&#10;# 1. Figure out paths&#10;BUILD_CONFIG=&quot;${PROJECT_DIR}/BuildNumber.xcconfig&quot;&#10;&#10;# 2. Read current build number from BuildNumber.xcconfig (if it exists)&#10;if [ -f &quot;$BUILD_CONFIG&quot; ]; then&#10;  CURRENT_BUILD=$(grep -E &apos;^\s*CURRENT_PROJECT_VERSION\s*=&apos; &quot;$BUILD_CONFIG&quot; | sed -E &apos;s/.*=\s*([0-9]+).*/\1/&apos; || echo &quot;&quot;)&#10;else&#10;  CURRENT_BUILD=&quot;&quot;&#10;fi&#10;&#10;if [ -z &quot;$CURRENT_BUILD&quot; ]; then&#10;  CURRENT_BUILD=0&#10;fi&#10;&#10;NEW_BUILD=$((CURRENT_BUILD + 1))&#10;&#10;# 3. Write the new value back to BuildNumber.xcconfig&#10;cat &gt; &quot;$BUILD_CONFIG&quot; &lt;&lt;EOF&#10;// Auto-generated. Do not edit by hand.&#10;&#10;CURRENT_PROJECT_VERSION = $NEW_BUILD&#10;EOF&#10;&#10;echo &quot;Bumped build number: $CURRENT_BUILD -&gt; $NEW_BUILD&quot;&#10;echo &quot;Wrote to: $BUILD_CONFIG&quot;&#10;">
-               <EnvironmentBuildable>
-                  <BuildableReference
-                     BuildableIdentifier = "primary"
-                     BlueprintIdentifier = "30D1DDB62EE33CB200943464"
-                     BuildableName = "xDeploy.app"
-                     BlueprintName = "xDeploy"
-                     ReferencedContainer = "container:xDeploy.xcodeproj">
-                  </BuildableReference>
-               </EnvironmentBuildable>
-            </ActionContent>
-         </ExecutionAction>
-      </PreActions>
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
