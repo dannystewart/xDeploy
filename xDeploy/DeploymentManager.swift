@@ -14,6 +14,9 @@ final class DeploymentManager: @unchecked Sendable {
         deviceName: String,
         outputHandler: @escaping @Sendable (String) -> Void,
     ) async throws {
+        // Run pre-build scripts (e.g., build number updates)
+        try await self.runPreBuildScripts(for: project)
+
         let args = [
             "-scheme",
             project.scheme,
@@ -106,6 +109,86 @@ final class DeploymentManager: @unchecked Sendable {
 
         statusHandler("✓ Running \(project.name) on \(deviceName)")
         outputHandler("\n✓ Launch complete\n")
+    }
+
+    /// Extracts and runs pre-build scripts from the project's scheme file.
+    private func runPreBuildScripts(for project: Project) async throws {
+        let expandedProjectPath = (project.projectPath as NSString).expandingTildeInPath
+        let projectURL = URL(fileURLWithPath: expandedProjectPath)
+        let projectDirectory = projectURL.deletingLastPathComponent()
+
+        // Look for the scheme file
+        let schemePath = projectURL
+            .appendingPathComponent("xcshareddata")
+            .appendingPathComponent("xcschemes")
+            .appendingPathComponent("\(project.scheme).xcscheme")
+
+        guard FileManager.default.fileExists(atPath: schemePath.path) else {
+            // No scheme file found, nothing to run
+            return
+        }
+
+        // Parse the XML to extract pre-build scripts
+        guard let scripts = try self.extractPreBuildScripts(from: schemePath) else {
+            // No pre-build scripts found
+            return
+        }
+
+        // Run each script with appropriate environment
+        for script in scripts {
+            try await self.runPreBuildScript(script, projectDirectory: projectDirectory.path)
+        }
+    }
+
+    /// Extracts pre-build scripts from an .xcscheme file.
+    private func extractPreBuildScripts(from schemeURL: URL) throws -> [String]? {
+        guard let data = try? Data(contentsOf: schemeURL) else {
+            return nil
+        }
+
+        let parser = PreBuildScriptParser()
+        let xmlParser = XMLParser(data: data)
+        xmlParser.delegate = parser
+        xmlParser.parse()
+
+        return parser.scripts.isEmpty ? nil : parser.scripts
+    }
+
+    /// Runs a pre-build script with the necessary environment variables.
+    private func runPreBuildScript(_ script: String, projectDirectory: String) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/sh")
+                process.arguments = ["-c", script]
+
+                // Set up environment variables that Xcode would provide
+                var environment = ProcessInfo.processInfo.environment
+                environment["PROJECT_DIR"] = projectDirectory
+
+                process.environment = environment
+
+                // Capture output (but discard it - we run silently)
+                let outputPipe = Pipe()
+                process.standardOutput = outputPipe
+                process.standardError = outputPipe
+
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+
+                    if process.terminationStatus != 0 {
+                        continuation.resume(throwing: DeploymentError.preBuildScriptFailed(
+                            exitCode: process.terminationStatus,
+                        ))
+                    } else {
+                        continuation.resume()
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 
     /// Runs a shell command asynchronously with streaming output through xcbeautify.
@@ -289,11 +372,93 @@ final class DeploymentManager: @unchecked Sendable {
 
 enum DeploymentError: LocalizedError {
     case commandFailed(command: String, exitCode: Int32)
+    case preBuildScriptFailed(exitCode: Int32)
 
     var errorDescription: String? {
         switch self {
         case let .commandFailed(command, exitCode):
             "Command failed (exit \(exitCode)): \(command)"
+        case let .preBuildScriptFailed(exitCode):
+            "Pre-build script failed (exit \(exitCode))"
         }
+    }
+}
+
+// MARK: - PreBuildScriptParser
+
+/// XML parser for extracting pre-build scripts from .xcscheme files.
+private class PreBuildScriptParser: NSObject, XMLParserDelegate {
+    var scripts: [String] = []
+
+    private var inPreActions = false
+    private var inExecutionAction = false
+    private var inActionContent = false
+    private var currentScriptText: String?
+
+    func parser(
+        _: XMLParser,
+        didStartElement elementName: String,
+        namespaceURI _: String?,
+        qualifiedName _: String?,
+        attributes attributeDict: [String: String] = [:],
+    ) {
+        switch elementName {
+        case "PreActions":
+            self.inPreActions = true
+
+        case "ExecutionAction" where self.inPreActions:
+            self.inExecutionAction = true
+
+        case "ActionContent" where self.inExecutionAction:
+            self.inActionContent = true
+            if let scriptText = attributeDict["scriptText"] {
+                // Decode XML entities
+                self.currentScriptText = scriptText.decodingXMLEntities()
+            }
+
+        default:
+            break
+        }
+    }
+
+    func parser(
+        _: XMLParser,
+        didEndElement elementName: String,
+        namespaceURI _: String?,
+        qualifiedName _: String?,
+    ) {
+        switch elementName {
+        case "PreActions":
+            self.inPreActions = false
+
+        case "ExecutionAction":
+            self.inExecutionAction = false
+
+        case "ActionContent":
+            self.inActionContent = false
+            if let script = self.currentScriptText {
+                self.scripts.append(script)
+                self.currentScriptText = nil
+            }
+
+        default:
+            break
+        }
+    }
+}
+
+// MARK: - String Extension
+
+extension String {
+    /// Decodes common XML entities.
+    func decodingXMLEntities() -> String {
+        var result = self
+        result = result.replacingOccurrences(of: "&#10;", with: "\n")
+        result = result.replacingOccurrences(of: "&quot;", with: "\"")
+        result = result.replacingOccurrences(of: "&apos;", with: "'")
+        result = result.replacingOccurrences(of: "&lt;", with: "<")
+        result = result.replacingOccurrences(of: "&gt;", with: ">")
+        result = result.replacingOccurrences(of: "&amp;", with: "&")
+        return result
     }
 }
