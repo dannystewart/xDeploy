@@ -22,6 +22,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         true
     }
 
+    // MARK: - Menu Responder Actions
+
+    /// Show About panel (App menu)
+    @objc func showAbout(_: Any?) {
+        let credits = NSAttributedString(
+            string: "by Danny Stewart",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 10),
+                .foregroundColor: NSColor.secondaryLabelColor,
+            ],
+        )
+
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationName: "xDeploy",
+            .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0",
+            .version: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0",
+            .credits: credits,
+        ])
+    }
+
     private func setupMainMenu() {
         let mainMenu = NSMenu()
 
@@ -29,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
 
-        let aboutItem = NSMenuItem(title: "About xDeploy", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "About xDeploy", action: #selector(AppDelegate.showAbout(_:)), keyEquivalent: "")
         aboutItem.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
         appMenu.addItem(aboutItem)
 

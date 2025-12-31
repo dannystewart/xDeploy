@@ -7,11 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		30504ACD2F04B5A8006CEB97 /* BuildNumber.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */; };
 		30D19A262F031F820045EDE8 /* PolyKit in Frameworks */ = {isa = PBXBuildFile; productRef = 30D19A252F031F820045EDE8 /* PolyKit */; };
 		30D1DDC62EE33E0C00943464 /* xDeployIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 30D1DDC52EE33E0C00943464 /* xDeployIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildNumber.xcconfig; sourceTree = "<group>"; };
 		30D1DDB72EE33CB200943464 /* xDeploy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = xDeploy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30D1DDC52EE33E0C00943464 /* xDeployIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = xDeployIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -42,6 +44,7 @@
 				30D1DDB92EE33CB200943464 /* xDeploy */,
 				30D1DDB82EE33CB200943464 /* Products */,
 				30D1DDC52EE33E0C00943464 /* xDeployIcon.icon */,
+				30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -122,6 +125,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				30D1DDC62EE33E0C00943464 /* xDeployIcon.icon in Resources */,
+				30504ACD2F04B5A8006CEB97 /* BuildNumber.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,6 +144,7 @@
 /* Begin XCBuildConfiguration section */
 		30D1DDC02EE33CB300943464 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -209,6 +214,7 @@
 		};
 		30D1DDC12EE33CB300943464 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -270,13 +276,14 @@
 		};
 		30D1DDC32EE33CB300943464 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = xDeployIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.1.0;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = PL2FTGT24W;
 				ENABLE_APP_SANDBOX = NO;
@@ -307,13 +314,14 @@
 		};
 		30D1DDC42EE33CB300943464 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = xDeployIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.1.0;
+				CURRENT_PROJECT_VERSION = "$(CURRENT_PROJECT_VERSION)";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = PL2FTGT24W;
 				ENABLE_APP_SANDBOX = NO;

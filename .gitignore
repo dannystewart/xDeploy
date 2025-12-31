@@ -19,6 +19,7 @@ Packages/
 .env
 .specstory/
 *.tmp
+BuildNumber.xcconfig
 Chats
 Config/Secrets.xcconfig
 Documentation/LiquidGlass
