@@ -38,7 +38,7 @@ final class MainViewController: NSViewController {
     private var deployingDevice: DeviceType?
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 660, height: 356))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 680, height: 356))
     }
 
     override func viewDidLoad() {
@@ -144,8 +144,8 @@ final class MainViewController: NSViewController {
     /// Parses ANSI color codes and returns an attributed string with colors applied.
     private func parseANSIColors(_ text: String) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        let baseFont = PolyFont.jetBrainsMono.font(size: 10, weight: .light)
-        let boldFont = PolyFont.jetBrainsMono.font(size: 10, weight: .medium)
+        let baseFont = PolyFont.jetBrainsMono.font(size: 11, weight: .light)
+        let boldFont = PolyFont.jetBrainsMono.font(size: 11, weight: .medium)
         var currentColor = NSColor.textColor
         var currentBold = false
 
@@ -292,7 +292,7 @@ final class MainViewController: NSViewController {
 
         // Layout constants
         let padding: CGFloat = 20
-        let projectListWidth: CGFloat = 240
+        let projectListWidth: CGFloat = 220
         let buttonGridHeight: CGFloat = 80
 
         NSLayoutConstraint.activate([
@@ -989,7 +989,7 @@ extension MainViewController: NSToolbarDelegate {
 
         if self.isAlwaysOnTop {
             view.window?.level = .floating
-            self.alwaysOnTopButton?.image = NSImage(systemSymbolName: "pin", accessibilityDescription: "Always on Top (Active)")
+            self.alwaysOnTopButton?.image = NSImage(systemSymbolName: "pin.fill", accessibilityDescription: "Always on Top (Active)")
         } else {
             view.window?.level = .normal
             self.alwaysOnTopButton?.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: "Always on Top")

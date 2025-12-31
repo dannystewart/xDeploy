@@ -121,9 +121,11 @@ final class DeploymentManager: @unchecked Sendable {
                 xcodebuildProcess.executableURL = URL(fileURLWithPath: command)
                 xcodebuildProcess.arguments = arguments
 
-                // Set up xcbeautify process
+                // Set up xcbeautify process with script to force unbuffered output
+                // Using `script -q /dev/null` tricks xcbeautify into thinking it's writing to a TTY
                 let beautifyProcess = Process()
-                beautifyProcess.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/xcbeautify")
+                beautifyProcess.executableURL = URL(fileURLWithPath: "/usr/bin/script")
+                beautifyProcess.arguments = ["-q", "/dev/null", "/opt/homebrew/bin/xcbeautify"]
 
                 // Enable color output - xcbeautify respects these environment variables
                 var environment = ProcessInfo.processInfo.environment
