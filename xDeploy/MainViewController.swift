@@ -142,7 +142,7 @@ final class MainViewController: NSViewController {
     }
 
     /// Parses ANSI color codes and returns an attributed string with colors applied.
-    private func parseANSIColors(_ text: String) -> NSAttributedString {
+    private func parseANSIColors(_ text: String) -> NSAttributedString { // swiftlint:disable:this cyclomatic_complexity
         let result = NSMutableAttributedString()
         let baseFont = PolyFont.jetBrainsMono.font(size: 11, weight: .light)
         let boldFont = PolyFont.jetBrainsMono.font(size: 11, weight: .medium)
