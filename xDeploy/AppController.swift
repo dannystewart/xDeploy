@@ -10,6 +10,22 @@ import SwiftUI
 /// (`MainViewController`, `NSWindow`), which must be interacted with on the main thread.
 @MainActor
 final class AppController: ObservableObject {
+    enum ActionMode: String, CaseIterable, Identifiable {
+        case runNow
+        case installOnly
+
+        var id: String { self.rawValue }
+
+        var displayName: String {
+            switch self {
+            case .runNow:
+                "Run Now"
+            case .installOnly:
+                "Install Only"
+            }
+        }
+    }
+
     enum Device: String, CaseIterable, Identifiable {
         case iPhone
         case iPad
@@ -29,7 +45,9 @@ final class AppController: ObservableObject {
     /// Owned here so menu bar actions can target the same UI instance.
     let mainViewController: MainViewController = .init()
 
+    @Published var actionMode: ActionMode = .runNow
     @Published var selectedDevice: Device = .iPhone
+    @Published var isAlwaysOnTop: Bool = false
 
     private var mainWindow: NSWindow?
     private var mainWindowDelegate: MainWindowDelegate?
@@ -41,21 +59,32 @@ final class AppController: ObservableObject {
 
         self.mainWindow = window
 
-        // Mirror the old AppKit lifecycle defaults.
-        window.title = "xDeploy"
         window.identifier = NSUserInterfaceItemIdentifier("MainWindow")
-
-        // Match the legacy window chrome as early as possible.
-        window.styleMask.insert(.unifiedTitleAndToolbar)
-        window.toolbarStyle = .unified
-
-        self.attachToolbarIfNeeded(to: window)
         self.attachWindowDelegateIfNeeded(to: window)
     }
 
     func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
         self.mainWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    func setActionMode(_ newMode: ActionMode) {
+        self.actionMode = newMode
+
+        switch newMode {
+        case .runNow:
+            self.mainViewController.switchToRunMode()
+        case .installOnly:
+            self.mainViewController.switchToInstallMode()
+        }
+    }
+
+    func toggleAlwaysOnTop() {
+        let newValue = !self.isAlwaysOnTop
+        self.isAlwaysOnTop = newValue
+
+        guard let window = self.mainWindow else { return }
+        window.level = newValue ? .floating : .normal
     }
 
     func runProject(_ project: Project) {
@@ -101,19 +130,6 @@ final class AppController: ObservableObject {
                 }
             }
         }
-    }
-
-    private func attachToolbarIfNeeded(to window: NSWindow) {
-        let toolbarIdentifier = NSToolbar.Identifier("MainToolbar")
-
-        if window.toolbar?.identifier == toolbarIdentifier {
-            return
-        }
-
-        let toolbar = NSToolbar(identifier: toolbarIdentifier)
-        toolbar.delegate = self.mainViewController
-        toolbar.displayMode = .iconOnly
-        window.toolbar = toolbar
     }
 
     private func attachWindowDelegateIfNeeded(to window: NSWindow) {

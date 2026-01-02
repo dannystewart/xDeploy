@@ -10,7 +10,7 @@ struct xDeployApp: App {
     @AppStorage("MenuBarExtraIsInserted") private var isMenuBarExtraInserted: Bool = true
 
     var body: some Scene {
-        WindowGroup(id: "main") {
+        Window("xDeploy", id: "main") {
             MainWindowRootView()
                 .environmentObject(self.appController)
         }
@@ -98,7 +98,7 @@ struct xDeployApp: App {
                 Divider()
 
                 Button {
-                    NSApp.sendAction(#selector(MainViewController.toggleAlwaysOnTop), to: nil, from: nil)
+                    self.appController.toggleAlwaysOnTop()
                 } label: {
                     Label("Always on Top", systemImage: "macwindow.on.rectangle")
                 }
@@ -123,14 +123,14 @@ struct xDeployApp: App {
                 Divider()
 
                 Button {
-                    NSApp.sendAction(#selector(MainViewController.switchToInstallMode), to: nil, from: nil)
+                    self.appController.setActionMode(.installOnly)
                 } label: {
                     Label("Install Only", systemImage: "square.and.arrow.down")
                 }
                 .keyboardShortcut("i", modifiers: .command)
 
                 Button {
-                    NSApp.sendAction(#selector(MainViewController.switchToRunMode), to: nil, from: nil)
+                    self.appController.setActionMode(.runNow)
                 } label: {
                     Label("Run Now", systemImage: "play.fill")
                 }
@@ -236,6 +236,7 @@ private final class WindowObservingView: NSView {
 
 struct MainWindowRootView: View {
     @EnvironmentObject private var appController: AppController
+    @State private var actionModeSelection: AppController.ActionMode = .runNow
 
     var body: some View {
         ZStack {
@@ -247,6 +248,64 @@ struct MainWindowRootView: View {
 
             MainViewControllerHost(viewController: self.appController.mainViewController)
                 .frame(minWidth: 660, minHeight: 356)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .navigation) {
+                Button {
+                    self.appController.mainViewController.addProject()
+                } label: {
+                    Image(systemName: "plus")
+                }
+
+                Button {
+                    self.appController.mainViewController.showSettings()
+                } label: {
+                    Image(systemName: "gear")
+                }
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Picker(
+                    "",
+                    selection: self.$actionModeSelection,
+                ) {
+                    Text(AppController.ActionMode.runNow.displayName)
+                        .tag(AppController.ActionMode.runNow)
+
+                    Text(AppController.ActionMode.installOnly.displayName)
+                        .tag(AppController.ActionMode.installOnly)
+                }
+                .pickerStyle(.segmented)
+            }
+
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button {
+                    self.appController.mainViewController.showCustomDeviceSheet()
+                } label: {
+                    Image(systemName: "ipad.landscape.and.iphone")
+                }
+
+                Button {
+                    self.appController.toggleAlwaysOnTop()
+                } label: {
+                    Image(systemName: self.appController.isAlwaysOnTop ? "pin.fill" : "pin.slash")
+                }
+            }
+        }
+        .onAppear {
+            self.actionModeSelection = self.appController.actionMode
+        }
+        .onChange(of: self.appController.actionMode) { _, newValue in
+            if self.actionModeSelection != newValue {
+                self.actionModeSelection = newValue
+            }
+        }
+        .onChange(of: self.actionModeSelection) { _, newValue in
+            if self.appController.actionMode != newValue {
+                DispatchQueue.main.async {
+                    self.appController.setActionMode(newValue)
+                }
+            }
         }
     }
 }
