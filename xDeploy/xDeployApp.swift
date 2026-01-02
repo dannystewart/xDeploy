@@ -1,4 +1,5 @@
 import AppKit
+import PolyKit
 import SwiftUI
 
 // MARK: - xDeployApp
@@ -16,11 +17,14 @@ struct xDeployApp: App {
             // xDeploy is a single-window app; remove SwiftUI's default “New Window” item.
             CommandGroup(replacing: .newItem) {}
 
-            // Keep the custom About panel (credits).
+            // Use PolyAbout for standardized About panel.
             CommandGroup(replacing: .appInfo) {
-                Button("About xDeploy") {
-                    (NSApp.delegate as? AppDelegate)?.showAbout(nil)
+                Button {
+                    PolyAbout.show(info: PolyAbout.Info(appName: "xDeploy"))
+                } label: {
+                    Label("About xDeploy", systemImage: "info.circle")
                 }
+                .keyboardShortcut("i", modifiers: [.command, .option])
             }
 
             // Route Settings… to the existing AppKit sheet.
