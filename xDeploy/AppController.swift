@@ -45,6 +45,10 @@ final class AppController: ObservableObject {
         window.title = "xDeploy"
         window.identifier = NSUserInterfaceItemIdentifier("MainWindow")
 
+        // Match the legacy window chrome as early as possible.
+        window.styleMask.insert(.unifiedTitleAndToolbar)
+        window.toolbarStyle = .unified
+
         self.attachToolbarIfNeeded(to: window)
         self.attachWindowDelegateIfNeeded(to: window)
     }
@@ -110,7 +114,6 @@ final class AppController: ObservableObject {
         toolbar.delegate = self.mainViewController
         toolbar.displayMode = .iconOnly
         window.toolbar = toolbar
-        window.toolbarStyle = .unified
     }
 
     private func attachWindowDelegateIfNeeded(to window: NSWindow) {

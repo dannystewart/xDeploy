@@ -15,6 +15,7 @@ struct xDeployApp: App {
                 .environmentObject(self.appController)
         }
         .defaultSize(width: 660, height: 356)
+        .windowToolbarStyle(.unified)
         .commands {
             // xDeploy is a single-window app; remove SwiftUI's default “New Window” item.
             CommandGroup(replacing: .newItem) {}
@@ -31,63 +32,145 @@ struct xDeployApp: App {
 
             // Route Settings… to the existing AppKit sheet.
             CommandGroup(replacing: .appSettings) {
-                Button("Settings…") {
+                Button {
                     NSApp.sendAction(#selector(MainViewController.showSettings), to: nil, from: nil)
+                } label: {
+                    Label("Settings…", systemImage: "gear")
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
 
             CommandGroup(after: .sidebar) {
-                Toggle("Show Menu Bar Item", systemImage: "macwindow", isOn: self.$isMenuBarExtraInserted)
+                Toggle(isOn: self.$isMenuBarExtraInserted) {
+                    Label("Show Menu Bar Item", systemImage: "menubar.rectangle")
+                }
+            }
+
+            CommandGroup(replacing: .undoRedo) {
+                Button {
+                    NSApp.sendAction(Selector(("undo:")), to: nil, from: nil)
+                } label: {
+                    Label("Undo", systemImage: "arrow.uturn.backward")
+                }
+                .keyboardShortcut("z", modifiers: .command)
+
+                Button {
+                    NSApp.sendAction(Selector(("redo:")), to: nil, from: nil)
+                } label: {
+                    Label("Redo", systemImage: "arrow.uturn.forward")
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+            }
+
+            CommandGroup(replacing: .pasteboard) {
+                Button {
+                    NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil)
+                } label: {
+                    Label("Cut", systemImage: "scissors")
+                }
+                .keyboardShortcut("x", modifiers: .command)
+
+                Button {
+                    NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+                .keyboardShortcut("c", modifiers: .command)
+
+                Button {
+                    NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
+                } label: {
+                    Label("Paste", systemImage: "clipboard")
+                }
+                .keyboardShortcut("v", modifiers: .command)
+
+                Divider()
+
+                Button {
+                    NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
+                } label: {
+                    Label("Select All", systemImage: "selection.pin.in.out")
+                }
+                .keyboardShortcut("a", modifiers: .command)
+            }
+
+            CommandGroup(after: .windowArrangement) {
+                Divider()
+
+                Button {
+                    NSApp.sendAction(#selector(MainViewController.toggleAlwaysOnTop), to: nil, from: nil)
+                } label: {
+                    Label("Always on Top", systemImage: "macwindow.on.rectangle")
+                }
+                .keyboardShortcut("t", modifiers: .command)
             }
 
             CommandMenu("Project") {
-                Button("New Project") {
+                Button {
                     NSApp.sendAction(#selector(MainViewController.addProject), to: nil, from: nil)
+                } label: {
+                    Label("New Project", systemImage: "plus")
                 }
                 .keyboardShortcut("n", modifiers: .command)
 
-                Button("Edit Project") {
+                Button {
                     NSApp.sendAction(#selector(MainViewController.editCurrentlySelectedProject), to: nil, from: nil)
+                } label: {
+                    Label("Edit Project", systemImage: "pencil")
                 }
                 .keyboardShortcut("e", modifiers: .command)
 
                 Divider()
 
-                Button("Install Only") {
+                Button {
                     NSApp.sendAction(#selector(MainViewController.switchToInstallMode), to: nil, from: nil)
+                } label: {
+                    Label("Install Only", systemImage: "square.and.arrow.down")
                 }
                 .keyboardShortcut("i", modifiers: .command)
 
-                Button("Run Now") {
+                Button {
                     NSApp.sendAction(#selector(MainViewController.switchToRunMode), to: nil, from: nil)
+                } label: {
+                    Label("Run Now", systemImage: "play.fill")
                 }
                 .keyboardShortcut("r", modifiers: .command)
 
                 Divider()
 
-                Button("Deploy to iPhone") {
+                Button {
                     NSApp.sendAction(#selector(MainViewController.performActionForPhone), to: nil, from: nil)
+                } label: {
+                    Label("Deploy to iPhone", systemImage: "iphone")
                 }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
 
-                Button("Deploy to iPad") {
+                Button {
                     NSApp.sendAction(#selector(MainViewController.performActionForPad), to: nil, from: nil)
+                } label: {
+                    Label("Deploy to iPad", systemImage: "ipad.landscape")
                 }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
 
                 Divider()
 
-                Button("Custom Device…") {
+                Button {
                     NSApp.sendAction(#selector(MainViewController.showCustomDeviceSheet), to: nil, from: nil)
+                } label: {
+                    Label("Custom Device…", systemImage: "ipad.and.iphone")
                 }
                 .keyboardShortcut("d", modifiers: [.command, .shift])
             }
         }
 
-        MenuBarExtra("xDeploy", systemImage: "iphone", isInserted: self.$isMenuBarExtraInserted) {
+        MenuBarExtra(isInserted: self.$isMenuBarExtraInserted) {
             MenuBarExtraView()
                 .environmentObject(self.appController)
+        } label: {
+            Image(systemName: "iphone")
+                .renderingMode(.template)
+                .font(.system(size: 18, weight: .medium))
+                .accessibilityLabel(Text("xDeploy"))
         }
         .menuBarExtraStyle(.menu)
     }
@@ -138,6 +221,11 @@ struct WindowAccessor: NSViewRepresentable {
 private final class WindowObservingView: NSView {
     var onWindowChange: ((NSWindow?) -> Void)?
 
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        self.onWindowChange?(newWindow)
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         self.onWindowChange?(self.window)
@@ -150,13 +238,15 @@ struct MainWindowRootView: View {
     @EnvironmentObject private var appController: AppController
 
     var body: some View {
-        MainViewControllerHost(viewController: self.appController.mainViewController)
-            .frame(minWidth: 660, minHeight: 356)
-            .background(
-                WindowAccessor { window in
-                    self.appController.attachMainWindowIfNeeded(window)
-                }
-                .allowsHitTesting(false),
-            )
+        ZStack {
+            WindowAccessor { window in
+                self.appController.attachMainWindowIfNeeded(window)
+            }
+            .frame(width: 0, height: 0)
+            .allowsHitTesting(false)
+
+            MainViewControllerHost(viewController: self.appController.mainViewController)
+                .frame(minWidth: 660, minHeight: 356)
+        }
     }
 }
