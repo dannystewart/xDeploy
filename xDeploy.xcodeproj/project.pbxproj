@@ -8,12 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		30504ACD2F04B5A8006CEB97 /* BuildNumber.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */; };
+		30ADA6FF2F08730B0073A11F /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30ADA6FE2F08730B0073A11F /* AppIntents.framework */; };
 		30D19A262F031F820045EDE8 /* PolyKit in Frameworks */ = {isa = PBXBuildFile; productRef = 30D19A252F031F820045EDE8 /* PolyKit */; };
 		30D1DDC62EE33E0C00943464 /* xDeployIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 30D1DDC52EE33E0C00943464 /* xDeployIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildNumber.xcconfig; sourceTree = "<group>"; };
+		30ADA6FE2F08730B0073A11F /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		30D1DDB72EE33CB200943464 /* xDeploy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = xDeploy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30D1DDC52EE33E0C00943464 /* xDeployIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = xDeployIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -31,6 +33,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				30ADA6FF2F08730B0073A11F /* AppIntents.framework in Frameworks */,
 				30D19A262F031F820045EDE8 /* PolyKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -38,6 +41,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		30ADA6FD2F08730B0073A11F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				30ADA6FE2F08730B0073A11F /* AppIntents.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		30D1DDAE2EE33CB200943464 = {
 			isa = PBXGroup;
 			children = (
@@ -45,6 +56,7 @@
 				30D1DDB82EE33CB200943464 /* Products */,
 				30D1DDC52EE33E0C00943464 /* xDeployIcon.icon */,
 				30504ACC2F04B5A8006CEB97 /* BuildNumber.xcconfig */,
+				30ADA6FD2F08730B0073A11F /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
