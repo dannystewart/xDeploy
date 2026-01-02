@@ -44,8 +44,6 @@ final class AppController: ObservableObject {
         // Mirror the old AppKit lifecycle defaults.
         window.title = "xDeploy"
         window.identifier = NSUserInterfaceItemIdentifier("MainWindow")
-        window.setFrameAutosaveName("MainWindow")
-        window.minSize = NSSize(width: 660, height: 356)
 
         self.attachToolbarIfNeeded(to: window)
         self.attachWindowDelegateIfNeeded(to: window)

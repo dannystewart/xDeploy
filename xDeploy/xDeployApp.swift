@@ -13,6 +13,7 @@ struct xDeployApp: App {
             MainWindowRootView()
                 .environmentObject(self.appController)
         }
+        .defaultSize(width: 660, height: 356)
         .commands {
             // xDeploy is a single-window app; remove SwiftUI's default “New Window” item.
             CommandGroup(replacing: .newItem) {}
@@ -149,6 +150,7 @@ struct MainWindowRootView: View {
 
     var body: some View {
         MainViewControllerHost(viewController: self.appController.mainViewController)
+            .frame(minWidth: 660, minHeight: 356)
             .background(
                 WindowAccessor { window in
                     self.appController.attachMainWindowIfNeeded(window)
