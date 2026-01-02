@@ -7,6 +7,7 @@ import SwiftUI
 @main
 struct xDeployApp: App {
     @StateObject private var appController: AppController = .init()
+    @AppStorage("MenuBarExtraIsInserted") private var isMenuBarExtraInserted: Bool = true
 
     var body: some Scene {
         WindowGroup(id: "main") {
@@ -84,7 +85,7 @@ struct xDeployApp: App {
             }
         }
 
-        MenuBarExtra("xDeploy", systemImage: "iphone") {
+        MenuBarExtra("xDeploy", systemImage: "iphone", isInserted: self.$isMenuBarExtraInserted) {
             MenuBarExtraView()
                 .environmentObject(self.appController)
         }
